@@ -1,5 +1,11 @@
 {
   "dependencies": {
-    "elm-land": "0.20.1"
+    "@tailwindcss/cli": "^4.0.0-beta.8",
+    "elm-land": "0.20.1",
+    "tailwindcss": "^4.0.0-beta.8"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -i css/raw.css -o public/styles.css",
+    "watch:css": "tailwindcss -i css/raw.css -o public/styles.css --watch"
   }
 }

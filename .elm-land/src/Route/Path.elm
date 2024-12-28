@@ -8,6 +8,7 @@ import Url.Parser exposing ((</>))
 
 type Path
     = Home_
+    | Counter
     | NotFound_
 
 
@@ -30,6 +31,9 @@ fromString urlPath =
         [] ->
             Just Home_
 
+        "counter" :: [] ->
+            Just Counter
+
         _ ->
             Nothing
 
@@ -47,6 +51,9 @@ toString path =
             case path of
                 Home_ ->
                     []
+
+                Counter ->
+                    [ "counter" ]
 
                 NotFound_ ->
                     [ "404" ]
