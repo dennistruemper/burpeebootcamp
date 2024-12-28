@@ -83,8 +83,8 @@ view shared model =
 
             html {
                 height: 100%;
-                color: white;
-                background: linear-gradient(#2C3E50, #3498DB);
+                color: #8B4513;
+                background: linear-gradient(#E6D5B8, #D2B48C);
                 -webkit-tap-highlight-color: transparent;
             }
             body {
@@ -104,6 +104,7 @@ view shared model =
                 font-weight: 600 !important;
                 font-family: 'Lora';
                 font-size: 1.5rem;
+                color: #8B4513;
             }
             .nose-button {
                 width: 100vw;
@@ -112,7 +113,7 @@ view shared model =
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                background-color: #ffffff20;
+                background-color: rgba(210, 180, 140, 0.3);
                 cursor: pointer;
                 user-select: none;
                 -webkit-user-select: none;
@@ -122,7 +123,7 @@ view shared model =
                 gap: 1rem;
             }
             .nose-button:active {
-                background-color: #ffffff40;
+                background-color: rgba(210, 180, 140, 0.5);
             }
             .counter {
                 font-size: 5rem;
@@ -132,11 +133,13 @@ view shared model =
                 flex-direction: column;
                 align-items: center;
                 gap: 0.5rem;
+                color: #8B4513;
             }
             .reps-count {
                 font-size: 2rem;
                 opacity: 0.8;
                 font-weight: normal;
+                color: #A0522D;
             }
             @keyframes scaleCount {
                 0% { transform: scale(1); }
@@ -147,6 +150,7 @@ view shared model =
                 font-size: 1.2rem;
                 opacity: 0;
                 transition: opacity 0.3s;
+                color: #8B4513;
             }
             .tap-text.pulsing {
                 opacity: 1;
@@ -159,7 +163,7 @@ view shared model =
             }
             .reset-button {
                 cursor: pointer;
-                background-color: #ff000030;
+                background-color: rgba(139, 69, 19, 0.2);
                 padding: 0.8rem 1.6rem;
                 border-radius: 8px;
                 user-select: none;
@@ -167,9 +171,10 @@ view shared model =
                 transition: background-color 0.2s;
                 margin-top: 1rem;
                 font-size: 0.9rem;
+                color: #8B4513;
             }
             .reset-button:active {
-                background-color: #ff000040;
+                background-color: rgba(139, 69, 19, 0.3);
             }
             .container {
                 display: flex;
