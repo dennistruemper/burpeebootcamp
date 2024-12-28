@@ -582,6 +582,9 @@
   .grid {
     display: grid;
   }
+  .hidden {
+    display: none;
+  }
   .inline {
     display: inline;
   }
@@ -873,6 +876,16 @@
   .active\:bg-amber-800\/30 {
     &:active {
       background-color: color-mix(in oklab, var(--color-amber-800) 30%, transparent);
+    }
+  }
+  .md\:block {
+    @media (width >= 48rem) {
+      display: block;
+    }
+  }
+  .md\:hidden {
+    @media (width >= 48rem) {
+      display: none;
     }
   }
   .md\:grid-cols-3 {
