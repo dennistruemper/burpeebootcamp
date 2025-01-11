@@ -1,6 +1,11 @@
 module Evergreen.V3.Burpee exposing (..)
 
 
+default : Burpee
+default =
+    Burpee { name = "Basic Burpee", angle = Flat, groundPart = Pushups 1, topPart = NoOp }
+
+
 type GroundAngle
     = HipInclined
     | KneeInclined
