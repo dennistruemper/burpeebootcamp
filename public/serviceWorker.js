@@ -9,6 +9,7 @@ const assets = [
   "/ios/1024.png",
   "/android/android-launchericon-192-192.png",
   "/android/android-launchericon-512-512.png",
+  "/logo/logo.png",
 ];
 self.addEventListener("install", (installEvent) => {
   installEvent.waitUntil(

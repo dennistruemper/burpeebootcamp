@@ -108,7 +108,13 @@ view shared model =
     , body =
         [ div [ class "flex flex-col items-center w-full h-screen" ]
             [ h1 [ class "mt-2 mb-2 font-semibold font-lora text-xl text-amber-800" ]
-                [ text "BurpeeBootcamp" ]
+                [ img
+                    [ src "/logo/logo.png"
+                    , class "h-32" -- Adjust height as needed
+                    , alt "BurpeeBootcamp"
+                    ]
+                    []
+                ]
             , details [ class "mb-4" ]
                 [ summary [ class "text-sm text-amber-800 opacity-60 cursor-pointer select-none" ]
                     [ text "Show options" ]
