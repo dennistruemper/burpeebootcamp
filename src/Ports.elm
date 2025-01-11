@@ -41,19 +41,12 @@ formatSerializeError field error =
 
 decodeMsg : String -> ToElm
 decodeMsg json =
-    let
-        _ =
-            Debug.log "decodeMsg" json
-    in
     case Json.Decode.decodeString (Json.Decode.field "tag" Json.Decode.string) json of
         Ok "NoOp" ->
             NoOp
 
         Ok "InitData" ->
             let
-                _ =
-                    Debug.log "initData" json
-
                 burpeeDecoder =
                     Json.Decode.field "tag" Json.Decode.string
                         |> Json.Decode.andThen
@@ -64,23 +57,12 @@ decodeMsg json =
                                 else
                                     Json.Decode.fail "Expected Burpee tag"
                             )
-
-                _ =
-                    Debug.log "burpeeDecoder" burpeeDecoder
             in
             case Json.Decode.decodeString initDataDecoder json of
                 Ok initData ->
-                    let
-                        _ =
-                            Debug.log "initData2" initData
-                    in
                     GotInitData initData
 
                 Err message ->
-                    let
-                        _ =
-                            Debug.log "initData2 error" message
-                    in
                     UnknownMessage (formatError "initData" message)
 
         Err message ->
@@ -100,19 +82,11 @@ port toJs : { tag : String, data : Json.Encode.Value } -> Cmd msg
 
 initDataDecoder =
     let
-        _ =
-            Debug.log "trying to decode" "initDataDecoder"
-
-        _ =
-            Debug.log "data field" (Json.Decode.field "data")
-
         burpeeDecoder =
             Json.Decode.field "currentBurpeeVariant" (Json.Decode.maybe Burpee.decodeJson)
-                |> Debug.log "burpee decoder result"
 
         workoutHistoryDecoder =
             Json.Decode.field "workoutHistory" (Json.Decode.list WorkoutResult.decodeJson)
-                |> Debug.log "workout history decoder result"
     in
     Json.Decode.field "data"
         (Json.Decode.map2 InitData

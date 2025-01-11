@@ -86,10 +86,6 @@ update route msg model =
         Shared.Msg.GotPortMessage rawMessage ->
             case Ports.decodeMsg rawMessage of
                 Ports.GotInitData data ->
-                    let
-                        _ =
-                            Debug.log "GotInitData" data
-                    in
                     ( { model
                         | currentBurpee = data.currentBurpeeVariant
                         , workoutHistory = data.workoutHistory
