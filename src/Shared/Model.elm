@@ -1,4 +1,4 @@
-module Shared.Model exposing (Model)
+module Shared.Model exposing (Model, WorkoutResult)
 
 {-| -}
 

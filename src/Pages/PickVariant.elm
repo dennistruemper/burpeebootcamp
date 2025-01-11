@@ -1,4 +1,4 @@
-module Pages.PickVariant exposing (Model, Msg, page)
+module Pages.PickVariant exposing (Model, Msg(..), page)
 
 import Burpee
 import Effect exposing (Effect)

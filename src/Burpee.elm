@@ -1,5 +1,8 @@
 module Burpee exposing
-    ( Burpee
+    ( Burpee(..)
+    , GroundAngle(..)
+    , GroundPart(..)
+    , TopPart(..)
     , calculateDifficulty
     , codec
     , decode
