@@ -100,15 +100,37 @@ view : Shared.Model -> Model -> View Msg
 view shared model =
     { title = "BurpeeBootcamp"
     , body =
-        [ div [ class "flex flex-col items-center w-full h-full" ]
+        [ div [ class "flex flex-col items-center w-full h-screen" ]
             [ h1 [ class "mt-2 mb-2 font-semibold font-lora text-xl text-amber-800" ]
                 [ text "BurpeeBootcamp" ]
+            , details [ class "mb-4" ]
+                [ summary [ class "text-sm text-amber-800 opacity-60 cursor-pointer select-none" ]
+                    [ text "Show options" ]
+                , div [ class "flex gap-2 mt-2" ]
+                    [ button
+                        [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                        , onClick ResetCounter
+                        ]
+                        [ text "Reset Counter" ]
+                    , button
+                        [ class "px-6 py-3 rounded-lg bg-green-700/20 cursor-pointer select-none text-sm text-green-900 active:bg-green-700/30"
+                        , onClick GetWorkoutFinishedTime
+                        ]
+                        [ text "Done" ]
+                    ]
+                ]
             , div
-                [ class "w-screen h-[60vh] flex flex-col items-center justify-center bg-amber-100/30 cursor-pointer select-none touch-manipulation gap-4"
+                [ class "w-screen flex-1 flex flex-col items-center justify-center bg-amber-100/30 cursor-pointer select-none touch-manipulation relative"
                 , onClick IncrementReps
                 ]
-                [ div
-                    [ class "flex flex-col items-center gap-2"
+                [ div [ class "absolute inset-0 grid grid-cols-2 xl:grid-cols-4 gap-4 place-items-center place-content-center pointer-events-none overflow-hidden" ]
+                    (List.repeat 20
+                        (div [ class "text-amber-800/10 text-4xl font-bold rotate-[-20deg] text-center" ]
+                            [ text "NOSE TAP AREA" ]
+                        )
+                    )
+                , div
+                    [ class "flex flex-col items-center gap-2 relative"
                     , classList
                         [ ( "animate-scale-count", model.currentReps > 0 )
                         ]
@@ -128,22 +150,6 @@ view shared model =
                         ]
                     ]
                     [ text "TAP TO COUNT" ]
-                ]
-            , details [ class "mt-4" ]
-                [ summary [ class "text-sm text-amber-800 opacity-60 cursor-pointer select-none" ]
-                    [ text "Show options" ]
-                , div [ class "flex gap-2 mt-2" ]
-                    [ button
-                        [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
-                        , onClick ResetCounter
-                        ]
-                        [ text "Reset Counter" ]
-                    , button
-                        [ class "px-6 py-3 rounded-lg bg-green-700/20 cursor-pointer select-none text-sm text-green-900 active:bg-green-700/30"
-                        , onClick GetWorkoutFinishedTime
-                        ]
-                        [ text "Done" ]
-                    ]
                 ]
             ]
         ]
