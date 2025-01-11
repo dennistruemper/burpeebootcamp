@@ -61,59 +61,54 @@ type alias Msg =
 update : Route () -> Msg -> Model -> ( Model, Effect Msg )
 update route msg model =
     case msg of
-        Shared.Msg.BurpeePicked burpee ->
-            ( { model | currentBurpee = Just burpee }
-            , Effect.none
-            )
-
         Shared.Msg.StoreWorkoutResult result ->
             case model.currentBurpee of
                 Just burpee ->
-                    ( { model
-                        | workoutHistory =
+                    let
+                        workout =
                             { reps = result.reps
                             , burpee = burpee
                             , timestamp = result.timestamp
                             }
-                                :: model.workoutHistory
+                    in
+                    ( { model
+                        | workoutHistory = workout :: model.workoutHistory
                       }
-                    , Effect.none
+                    , Effect.batch
+                        [ Effect.storeWorkout workout
+                        , Effect.calculateRepGoal Shared.Msg.GotTimeForRepGoalCalculation
+                        ]
                     )
 
                 Nothing ->
                     ( model, Effect.none )
 
         Shared.Msg.GotPortMessage rawMessage ->
-            let
-                _ =
-                    Debug.log "rawMessage" rawMessage
-            in
             case Ports.decodeMsg rawMessage of
                 Ports.GotInitData data ->
                     let
                         _ =
-                            Debug.log "data" data
+                            Debug.log "GotInitData" data
                     in
                     ( { model
                         | currentBurpee = data.currentBurpeeVariant
+                        , workoutHistory = data.workoutHistory
                         , initializing = False
                       }
-                    , Effect.none
+                    , Effect.calculateRepGoal Shared.Msg.GotTimeForRepGoalCalculation
                     )
 
                 Ports.NoOp ->
-                    let
-                        _ =
-                            Debug.log "NoOp" "NoOp"
-                    in
                     ( model, Effect.none )
 
-                Ports.UnknownMessage message ->
-                    let
-                        _ =
-                            Debug.log "UnknownMessage" message
-                    in
+                Ports.UnknownMessage _ ->
                     ( model, Effect.none )
+
+        Shared.Msg.GotTimeForRepGoalCalculation time ->
+            ( model, Effect.none )
+
+        Shared.Msg.BurpeePicked burpee ->
+            ( { model | currentBurpee = Just burpee }, Effect.none )
 
 
 

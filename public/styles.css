@@ -920,8 +920,26 @@
   .text-amber-800 {
     color: var(--color-amber-800);
   }
+  .text-amber-800\/3 {
+    color: color-mix(in oklab, var(--color-amber-800) 3%, transparent);
+  }
+  .text-amber-800\/5 {
+    color: color-mix(in oklab, var(--color-amber-800) 5%, transparent);
+  }
+  .text-amber-800\/6 {
+    color: color-mix(in oklab, var(--color-amber-800) 6%, transparent);
+  }
+  .text-amber-800\/7 {
+    color: color-mix(in oklab, var(--color-amber-800) 7%, transparent);
+  }
+  .text-amber-800\/8 {
+    color: color-mix(in oklab, var(--color-amber-800) 8%, transparent);
+  }
   .text-amber-800\/10 {
     color: color-mix(in oklab, var(--color-amber-800) 10%, transparent);
+  }
+  .text-amber-800\/20 {
+    color: color-mix(in oklab, var(--color-amber-800) 20%, transparent);
   }
   .text-amber-900 {
     color: var(--color-amber-900);

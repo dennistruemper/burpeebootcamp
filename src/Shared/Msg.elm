@@ -19,3 +19,4 @@ type Msg
     = BurpeePicked Burpee
     | StoreWorkoutResult WorkoutResult
     | GotPortMessage String
+    | GotTimeForRepGoalCalculation Time.Posix

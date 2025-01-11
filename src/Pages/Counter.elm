@@ -125,7 +125,7 @@ view shared model =
                 ]
                 [ div [ class "absolute inset-0 grid grid-cols-2 xl:grid-cols-4 gap-4 place-items-center place-content-center pointer-events-none overflow-hidden" ]
                     (List.repeat 20
-                        (div [ class "text-amber-800/10 text-4xl font-bold rotate-[-20deg] text-center" ]
+                        (div [ class "text-amber-800/5 text-4xl font-bold rotate-[-20deg] text-center" ]
                             [ text "NOSE TAP AREA" ]
                         )
                     )

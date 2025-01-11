@@ -6,6 +6,8 @@ import Json.Decode
 import Json.Decode.Pipeline as Pipeline
 import Json.Encode
 import Serialize as S
+import Time
+import WorkoutResult exposing (WorkoutResult)
 
 
 type ToElm
@@ -14,8 +16,14 @@ type ToElm
     | GotInitData InitData
 
 
+type ToJS
+    = StoreBurpeeVariant Burpee
+    | StoreWorkout WorkoutResult
+
+
 type alias InitData =
-    { currentBurpeeVariant : Maybe Burpee
+    { workoutHistory : List WorkoutResult
+    , currentBurpeeVariant : Maybe Burpee
     }
 
 
@@ -33,12 +41,19 @@ formatSerializeError field error =
 
 decodeMsg : String -> ToElm
 decodeMsg json =
+    let
+        _ =
+            Debug.log "decodeMsg" json
+    in
     case Json.Decode.decodeString (Json.Decode.field "tag" Json.Decode.string) json of
         Ok "NoOp" ->
             NoOp
 
         Ok "InitData" ->
             let
+                _ =
+                    Debug.log "initData" json
+
                 burpeeDecoder =
                     Json.Decode.field "tag" Json.Decode.string
                         |> Json.Decode.andThen
@@ -49,12 +64,23 @@ decodeMsg json =
                                 else
                                     Json.Decode.fail "Expected Burpee tag"
                             )
+
+                _ =
+                    Debug.log "burpeeDecoder" burpeeDecoder
             in
             case Json.Decode.decodeString initDataDecoder json of
                 Ok initData ->
+                    let
+                        _ =
+                            Debug.log "initData2" initData
+                    in
                     GotInitData initData
 
                 Err message ->
+                    let
+                        _ =
+                            Debug.log "initData2 error" message
+                    in
                     UnknownMessage (formatError "initData" message)
 
         Err message ->
@@ -72,15 +98,53 @@ formatError field error =
 port toJs : { tag : String, data : Json.Encode.Value } -> Cmd msg
 
 
-initDataCodec : S.Codec e InitData
-initDataCodec =
-    S.record InitData |> S.field .currentBurpeeVariant (S.maybe Burpee.codec) |> S.finishRecord
-
-
 initDataDecoder =
+    let
+        _ =
+            Debug.log "trying to decode" "initDataDecoder"
+
+        _ =
+            Debug.log "data field" (Json.Decode.field "data")
+
+        burpeeDecoder =
+            Json.Decode.field "currentBurpeeVariant" (Json.Decode.maybe Burpee.decodeJson)
+                |> Debug.log "burpee decoder result"
+
+        workoutHistoryDecoder =
+            Json.Decode.field "workoutHistory" (Json.Decode.list WorkoutResult.decodeJson)
+                |> Debug.log "workout history decoder result"
+    in
     Json.Decode.field "data"
-        (Json.Decode.map InitData
-            (Json.Decode.field "currentBurpeeVariant"
-                (Json.Decode.maybe Burpee.decodeJson)
-            )
+        (Json.Decode.map2 InitData
+            workoutHistoryDecoder
+            burpeeDecoder
         )
+
+
+encodeToJS : ToJS -> Json.Encode.Value
+encodeToJS msg =
+    case msg of
+        StoreBurpeeVariant burpee ->
+            Json.Encode.object
+                [ ( "tag", Json.Encode.string "StoreBurpeeVariant" )
+                , ( "data", Burpee.encodeJson burpee )
+                ]
+
+        StoreWorkout workout ->
+            Json.Encode.object
+                [ ( "tag", Json.Encode.string "StoreWorkout" )
+                , ( "data"
+                  , Json.Encode.object
+                        [ ( "reps", Json.Encode.int workout.reps )
+                        , ( "burpee", Burpee.encodeJson workout.burpee )
+                        , ( "timestamp", Json.Encode.int (Time.posixToMillis workout.timestamp) )
+                        ]
+                  )
+                ]
+
+
+decodeInitData : Json.Decode.Decoder InitData
+decodeInitData =
+    Json.Decode.map2 InitData
+        (Json.Decode.field "workoutHistory" (Json.Decode.list WorkoutResult.decodeJson))
+        (Json.Decode.field "currentBurpeeVariant" (Json.Decode.nullable Burpee.decodeJson))

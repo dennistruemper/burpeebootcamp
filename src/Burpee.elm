@@ -337,7 +337,7 @@ encodeGroundPart : GroundPart -> Json.Encode.Value
 encodeGroundPart arg =
     case arg of
         Plank ->
-            Json.Encode.string "Plank"
+            Json.Encode.object [ ( "tag", Json.Encode.string "Plank" ) ]
 
         MountainClimbers arg0 ->
             Json.Encode.object [ ( "tag", Json.Encode.string "MountainClimbers" ), ( "0", Json.Encode.int arg0 ) ]

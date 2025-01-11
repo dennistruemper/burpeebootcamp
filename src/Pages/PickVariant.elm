@@ -53,8 +53,8 @@ update msg model =
             ( model
             , Effect.batch
                 [ Effect.newCurrentBurpee burpee
-                , Effect.pushRoutePath Route.Path.Counter
                 , Effect.storeBurpeeVariant burpee
+                , Effect.pushRoutePath Route.Path.Counter
                 ]
             )
 

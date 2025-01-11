@@ -6,7 +6,7 @@ module Effect exposing
     , pushRoutePath, replaceRoutePath
     , loadExternalUrl, back
     , map, toCmd
-    , getTime, newCurrentBurpee, storeBurpeeVariant, storeWorkoutResult
+    , calculateRepGoal, getTime, newCurrentBurpee, storeBurpeeVariant, storeWorkout, storeWorkoutResult
     )
 
 {-|
@@ -120,6 +120,14 @@ storeBurpeeVariant burpee =
         }
 
 
+storeWorkout : WorkoutResult -> Effect msg
+storeWorkout workout =
+    SendMessageToJavaScript
+        { tag = "StoreWorkout"
+        , data = WorkoutResult.encodeJson workout
+        }
+
+
 
 -- ROUTING
 
@@ -168,6 +176,13 @@ replaceRoutePath path =
 loadExternalUrl : String -> Effect msg
 loadExternalUrl =
     LoadExternalUrl
+
+
+{-| Calculate the next rep goal based on workout history.
+-}
+calculateRepGoal : (Time.Posix -> msg) -> Effect msg
+calculateRepGoal gotTimeMsg =
+    SendCmd (Time.now |> Task.perform gotTimeMsg)
 
 
 {-| Navigate back one page

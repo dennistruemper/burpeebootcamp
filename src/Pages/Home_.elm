@@ -132,12 +132,17 @@ update shared msg model =
 
         Redirect ->
             ( model
-            , case shared.currentBurpee of
-                Just _ ->
-                    Effect.pushRoutePath Route.Path.Counter
+            , case shared.initializing of
+                True ->
+                    Effect.none
 
-                Nothing ->
-                    Effect.pushRoutePath Route.Path.PickVariant
+                False ->
+                    case shared.currentBurpee of
+                        Just _ ->
+                            Effect.pushRoutePath Route.Path.Counter
+
+                        Nothing ->
+                            Effect.pushRoutePath Route.Path.PickVariant
             )
 
 
