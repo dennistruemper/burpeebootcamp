@@ -1,6 +1,15 @@
 const version = "v1";
 const cacheName = `cache-${version}`;
-const assets = ["/"];
+const assets = [
+  "/",
+  "/manifest.json",
+  "/styles.css",
+  "/icon/icon.svg",
+  "/ios/180.png",
+  "/ios/1024.png",
+  "/android/android-launchericon-192-192.png",
+  "/android/android-launchericon-512-512.png",
+];
 self.addEventListener("install", (installEvent) => {
   installEvent.waitUntil(
     caches.open(cacheName).then((cache) => {

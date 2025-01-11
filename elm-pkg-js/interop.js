@@ -164,13 +164,15 @@ async function storeBurpeeVariant(burpee) {
 
 function setupServiceworker() {
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () {
-      navigator.serviceWorker
-        .register(SERVICE_WORKER_PATH)
-        .then((res) => {
-          console.log("service worker registered");
-        })
-        .catch((err) => console.log("service worker not registered", err));
+    window.addEventListener("load", async () => {
+      try {
+        const registration = await navigator.serviceWorker.register(
+          "/serviceWorker.js"
+        );
+        console.log("ServiceWorker registration successful");
+      } catch (err) {
+        console.log("ServiceWorker registration failed: ", err);
+      }
     });
   }
 }

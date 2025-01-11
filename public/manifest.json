@@ -1,6 +1,13 @@
 {
   "theme_color": "#fffbeb",
   "background_color": "#fef3c7",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "name": "BurpeeBootcamp",
+  "short_name": "Burpees",
+  "description": "Get stronger every day, one burpee at a time",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "android/android-launchericon-512-512.png",
@@ -42,12 +49,5 @@
       "sizes": "1024x1024",
       "type": "image/png"
     }
-  ],
-  "orientation": "portrait",
-  "display": "standalone",
-  "dir": "auto",
-  "lang": "en-US",
-  "name": "BurpeeBootcamp",
-  "short_name": "Burpees",
-  "start_url": "/"
+  ]
 }
