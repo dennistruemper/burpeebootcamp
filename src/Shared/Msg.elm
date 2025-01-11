@@ -20,3 +20,4 @@ type Msg
     | StoreWorkoutResult WorkoutResult
     | GotPortMessage String
     | GotTimeForRepGoalCalculation Time.Posix
+    | NoOp

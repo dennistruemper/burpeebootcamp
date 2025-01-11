@@ -110,6 +110,9 @@ update route msg model =
         Shared.Msg.BurpeePicked burpee ->
             ( { model | currentBurpee = Just burpee }, Effect.none )
 
+        Shared.Msg.NoOp ->
+            ( model, Effect.none )
+
 
 
 -- SUBSCRIPTIONS
