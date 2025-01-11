@@ -6,6 +6,7 @@ module Effect exposing
     , pushRoutePath, replaceRoutePath
     , loadExternalUrl, back
     , map, toCmd
+    , getTime, newCurrentBurpee, storeBurpeeVariant, storeWorkoutResult
     )
 
 {-|
@@ -24,13 +25,18 @@ module Effect exposing
 -}
 
 import Browser.Navigation
+import Burpee exposing (Burpee)
 import Dict exposing (Dict)
+import Json.Encode
+import Ports
 import Route exposing (Route)
 import Route.Path
 import Shared.Model
 import Shared.Msg
 import Task
+import Time
 import Url exposing (Url)
+import WorkoutResult exposing (WorkoutResult)
 
 
 type Effect msg
@@ -45,6 +51,10 @@ type Effect msg
     | Back
       -- SHARED
     | SendSharedMsg Shared.Msg.Msg
+    | SendMessageToJavaScript
+        { tag : String
+        , data : Json.Encode.Value
+        }
 
 
 
@@ -79,6 +89,35 @@ sendMsg msg =
     Task.succeed msg
         |> Task.perform identity
         |> SendCmd
+
+
+
+-- SHARED
+
+
+{-| Set the new current burpee.
+-}
+newCurrentBurpee : Burpee -> Effect msg
+newCurrentBurpee burpee =
+    SendSharedMsg (Shared.Msg.BurpeePicked burpee)
+
+
+storeWorkoutResult : WorkoutResult -> Effect msg
+storeWorkoutResult result =
+    SendSharedMsg (Shared.Msg.StoreWorkoutResult result)
+
+
+getTime : (Time.Posix -> msg) -> Effect msg
+getTime gotTimeMsg =
+    SendCmd (Time.now |> Task.perform gotTimeMsg)
+
+
+storeBurpeeVariant : Burpee -> Effect msg
+storeBurpeeVariant burpee =
+    SendMessageToJavaScript
+        { tag = "StoreBurpeeVariant"
+        , data = Burpee.encodeJson burpee
+        }
 
 
 
@@ -172,6 +211,9 @@ map fn effect =
         SendSharedMsg sharedMsg ->
             SendSharedMsg sharedMsg
 
+        SendMessageToJavaScript message ->
+            SendMessageToJavaScript message
+
 
 {-| Elm Land depends on this function to perform your effects.
 -}
@@ -211,3 +253,6 @@ toCmd options effect =
         SendSharedMsg sharedMsg ->
             Task.succeed sharedMsg
                 |> Task.perform options.fromSharedMsg
+
+        SendMessageToJavaScript message ->
+            Ports.toJs message

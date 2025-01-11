@@ -6,6 +6,9 @@
   },
   "scripts": {
     "build:css": "tailwindcss -i css/raw.css -o public/styles.css",
-    "watch:css": "tailwindcss -i css/raw.css -o public/styles.css --watch"
+    "landing:build:css": "tailwindcss -i css/raw.css -o landingpage/styles.css",
+    "watch:css": "tailwindcss -i css/raw.css -o public/styles.css --watch",
+    "landing:watch:css": "tailwindcss -i css/raw.css -o landingpage/styles.css --watch",
+    "generate:codecs": "npx elm-review --fix --template gampleman/elm-review-derive/preview"
   }
 }

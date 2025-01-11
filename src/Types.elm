@@ -3,7 +3,7 @@ module Types exposing (..)
 import Bridge
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
-import Burpee
+import Burpee exposing (Burpee)
 import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
 import Main as ElmLand
@@ -36,8 +36,7 @@ type ToFrontend
 
 
 type alias UserData =
-    { currentConfig : Burpee.BurpeeConfig
+    { currentConfig : Burpee
     , dailyTarget : Int
-    , workoutHistory : List Burpee.WorkoutStats
     , streak : Int
     }

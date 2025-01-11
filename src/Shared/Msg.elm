@@ -2,6 +2,11 @@ module Shared.Msg exposing (Msg(..))
 
 {-| -}
 
+import Burpee exposing (Burpee)
+import Ports
+import Time
+import WorkoutResult exposing (WorkoutResult)
+
 
 {-| Normally, this value would live in "Shared.elm"
 but that would lead to a circular dependency import cycle.
@@ -11,4 +16,6 @@ own file, so they can be imported by `Effect.elm`
 
 -}
 type Msg
-    = GotNewSmashedLikes Int
+    = BurpeePicked Burpee
+    | StoreWorkoutResult WorkoutResult
+    | GotPortMessage String

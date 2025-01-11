@@ -1,6 +1,7 @@
 module Pages.Counter exposing (Model, Msg(..), page)
 
 import Bridge
+import Burpee exposing (Burpee)
 import Effect exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -8,7 +9,9 @@ import Html.Events exposing (onClick)
 import Lamdera
 import Page exposing (Page)
 import Route exposing (Route)
+import Route.Path
 import Shared
+import Time
 import View exposing (View)
 
 
@@ -16,7 +19,7 @@ page : Shared.Model -> Route () -> Page Model Msg
 page shared route =
     Page.new
         { init = init
-        , update = update
+        , update = update shared
         , subscriptions = subscriptions
         , view = view shared
         }
@@ -45,10 +48,12 @@ init _ =
 type Msg
     = IncrementReps
     | ResetCounter
+    | GotWorkoutFinishedTime Time.Posix
+    | GetWorkoutFinishedTime
 
 
-update : Msg -> Model -> ( Model, Effect Msg )
-update msg model =
+update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
+update shared msg model =
     case msg of
         IncrementReps ->
             ( { model | currentReps = model.currentReps + 1 }
@@ -58,6 +63,23 @@ update msg model =
         ResetCounter ->
             ( { model | currentReps = 0 }
             , Effect.none
+            )
+
+        GetWorkoutFinishedTime ->
+            ( model
+            , Effect.getTime GotWorkoutFinishedTime
+            )
+
+        GotWorkoutFinishedTime time ->
+            ( model
+            , Effect.batch
+                [ Effect.storeWorkoutResult
+                    { reps = model.currentReps
+                    , burpee = Maybe.withDefault Burpee.default shared.currentBurpee
+                    , timestamp = time
+                    }
+                , Effect.replaceRoutePath Route.Path.Home_
+                ]
             )
 
 
@@ -91,10 +113,12 @@ view shared model =
                         [ ( "animate-scale-count", model.currentReps > 0 )
                         ]
                     ]
-                    [ div [ class "text-6xl font-bold text-amber-900" ]
+                    [ div [ class "text-amber-800 opacity-80 text-sm mb-2" ]
+                        [ text (Maybe.withDefault Burpee.default shared.currentBurpee |> Burpee.getDisplayName) ]
+                    , div [ class "text-6xl font-bold text-amber-900" ]
                         [ text (String.fromInt model.currentReps) ]
                     , div [ class "text-2xl opacity-80 text-amber-800" ]
-                        [ text " / 20 reps" ]
+                        [ text <| " / " ++ String.fromInt shared.currentRepGoal ++ " reps" ]
                     ]
                 , div
                     [ class "text-lg text-amber-800 transition-opacity duration-300"
@@ -105,11 +129,22 @@ view shared model =
                     ]
                     [ text "TAP TO COUNT" ]
                 ]
-            , div
-                [ class "mt-4 px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
-                , onClick ResetCounter
+            , details [ class "mt-4" ]
+                [ summary [ class "text-sm text-amber-800 opacity-60 cursor-pointer select-none" ]
+                    [ text "Show options" ]
+                , div [ class "flex gap-2 mt-2" ]
+                    [ button
+                        [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                        , onClick ResetCounter
+                        ]
+                        [ text "Reset Counter" ]
+                    , button
+                        [ class "px-6 py-3 rounded-lg bg-green-700/20 cursor-pointer select-none text-sm text-green-900 active:bg-green-700/30"
+                        , onClick GetWorkoutFinishedTime
+                        ]
+                        [ text "Done" ]
+                    ]
                 ]
-                [ text "Reset Counter" ]
             ]
         ]
     }

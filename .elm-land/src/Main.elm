@@ -16,6 +16,7 @@ import Main.Pages.Msg
 import Page
 import Pages.Home_
 import Pages.Counter
+import Pages.PickVariant
 import Pages.NotFound_
 import Pages.NotFound_
 import Route exposing (Route)
@@ -111,6 +112,23 @@ initPageAndLayout model =
                 Tuple.mapBoth
                     Main.Pages.Model.Counter
                     (Effect.map Main.Pages.Msg.Counter >> fromPageEffect model)
+                    ( pageModel, pageEffect )
+            , layout = Nothing
+            }
+
+        Route.Path.PickVariant ->
+            let
+                page : Page.Page Pages.PickVariant.Model Pages.PickVariant.Msg
+                page =
+                    Pages.PickVariant.page model.shared (Route.fromUrl () model.url)
+
+                ( pageModel, pageEffect ) =
+                    Page.init page ()
+            in
+            { page = 
+                Tuple.mapBoth
+                    Main.Pages.Model.PickVariant
+                    (Effect.map Main.Pages.Msg.PickVariant >> fromPageEffect model)
                     ( pageModel, pageEffect )
             , layout = Nothing
             }
@@ -354,6 +372,12 @@ updateFromPage msg model =
                 (Effect.map Main.Pages.Msg.Counter >> fromPageEffect model)
                 (Page.update (Pages.Counter.page model.shared (Route.fromUrl () model.url)) pageMsg pageModel)
 
+        ( Main.Pages.Msg.PickVariant pageMsg, Main.Pages.Model.PickVariant pageModel ) ->
+            Tuple.mapBoth
+                Main.Pages.Model.PickVariant
+                (Effect.map Main.Pages.Msg.PickVariant >> fromPageEffect model)
+                (Page.update (Pages.PickVariant.page model.shared (Route.fromUrl () model.url)) pageMsg pageModel)
+
         ( Main.Pages.Msg.NotFound_ pageMsg, Main.Pages.Model.NotFound_ pageModel ) ->
             Tuple.mapBoth
                 Main.Pages.Model.NotFound_
@@ -394,6 +418,12 @@ toLayoutFromPage model =
                 |> Pages.Counter.page model.shared
                 |> Page.layout pageModel
                 |> Maybe.map (Layouts.map (Main.Pages.Msg.Counter >> Page))
+
+        Main.Pages.Model.PickVariant pageModel ->
+            Route.fromUrl () model.url
+                |> Pages.PickVariant.page model.shared
+                |> Page.layout pageModel
+                |> Maybe.map (Layouts.map (Main.Pages.Msg.PickVariant >> Page))
 
         Main.Pages.Model.NotFound_ pageModel ->
             Route.fromUrl () model.url
@@ -454,6 +484,11 @@ subscriptions model =
                 Main.Pages.Model.Counter pageModel ->
                     Page.subscriptions (Pages.Counter.page model.shared (Route.fromUrl () model.url)) pageModel
                         |> Sub.map Main.Pages.Msg.Counter
+                        |> Sub.map Page
+
+                Main.Pages.Model.PickVariant pageModel ->
+                    Page.subscriptions (Pages.PickVariant.page model.shared (Route.fromUrl () model.url)) pageModel
+                        |> Sub.map Main.Pages.Msg.PickVariant
                         |> Sub.map Page
 
                 Main.Pages.Model.NotFound_ pageModel ->
@@ -523,6 +558,11 @@ viewPage model =
         Main.Pages.Model.Counter pageModel ->
             Page.view (Pages.Counter.page model.shared (Route.fromUrl () model.url)) pageModel
                 |> View.map Main.Pages.Msg.Counter
+                |> View.map Page
+
+        Main.Pages.Model.PickVariant pageModel ->
+            Page.view (Pages.PickVariant.page model.shared (Route.fromUrl () model.url)) pageModel
+                |> View.map Main.Pages.Msg.PickVariant
                 |> View.map Page
 
         Main.Pages.Model.NotFound_ pageModel ->
@@ -606,6 +646,12 @@ toPageUrlHookCmd model routes =
                 |> List.map Page
                 |> toCommands
 
+        Main.Pages.Model.PickVariant pageModel ->
+            Page.toUrlMessages routes (Pages.PickVariant.page model.shared (Route.fromUrl () model.url)) 
+                |> List.map Main.Pages.Msg.PickVariant
+                |> List.map Page
+                |> toCommands
+
         Main.Pages.Model.NotFound_ pageModel ->
             Page.toUrlMessages routes (Pages.NotFound_.page model.shared (Route.fromUrl () model.url)) 
                 |> List.map Main.Pages.Msg.NotFound_
@@ -666,6 +712,9 @@ isAuthProtected routePath =
             False
 
         Route.Path.Counter ->
+            False
+
+        Route.Path.PickVariant ->
             False
 
         Route.Path.NotFound_ ->

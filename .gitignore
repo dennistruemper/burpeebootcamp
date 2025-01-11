@@ -1,5 +1,6 @@
 /dist
 /.env
+/.elm-land/server/.vite
 /elm-stuff
 /node_modules
 .DS_Store

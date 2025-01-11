@@ -1,6 +1,7 @@
 module Pages.Home_ exposing (Model, Msg(..), page)
 
 import Bridge
+import Burpee
 import Effect exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -8,15 +9,17 @@ import Html.Events exposing (onClick)
 import Lamdera
 import Page exposing (Page)
 import Route exposing (Route)
+import Route.Path
 import Shared
+import Time
 import View exposing (View)
 
 
 page : Shared.Model -> Route () -> Page Model Msg
 page shared route =
     Page.new
-        { init = init
-        , update = update
+        { init = init shared
+        , update = update shared
         , subscriptions = subscriptions
         , view = view shared
         }
@@ -27,12 +30,11 @@ page shared route =
 
 
 type alias Model =
-    { currentReps : Int
-    }
+    { currentReps : Int }
 
 
-init : () -> ( Model, Effect Msg )
-init _ =
+init : Shared.Model -> () -> ( Model, Effect Msg )
+init shared _ =
     ( { currentReps = 0 }
     , Effect.none
     )
@@ -42,13 +44,81 @@ init _ =
 -- UPDATE
 
 
+monthToNumber : Time.Month -> Int
+monthToNumber month =
+    case month of
+        Time.Jan ->
+            1
+
+        Time.Feb ->
+            2
+
+        Time.Mar ->
+            3
+
+        Time.Apr ->
+            4
+
+        Time.May ->
+            5
+
+        Time.Jun ->
+            6
+
+        Time.Jul ->
+            7
+
+        Time.Aug ->
+            8
+
+        Time.Sep ->
+            9
+
+        Time.Oct ->
+            10
+
+        Time.Nov ->
+            11
+
+        Time.Dec ->
+            12
+
+
+toIsoDate : Time.Posix -> String
+toIsoDate time =
+    let
+        year =
+            String.fromInt (Time.toYear Time.utc time)
+
+        month =
+            String.padLeft 2 '0' (String.fromInt (monthToNumber (Time.toMonth Time.utc time)))
+
+        day =
+            String.padLeft 2 '0' (String.fromInt (Time.toDay Time.utc time))
+
+        hour =
+            String.padLeft 2 '0' (String.fromInt (Time.toHour Time.utc time))
+
+        minute =
+            String.padLeft 2 '0' (String.fromInt (Time.toMinute Time.utc time))
+
+        second =
+            String.padLeft 2 '0' (String.fromInt (Time.toSecond Time.utc time))
+
+        millisecond =
+            String.padLeft 3 '0' (String.fromInt (Time.toMillis Time.utc time))
+    in
+    year ++ "-" ++ month ++ "-" ++ day ++ "T" ++ hour ++ ":" ++ minute ++ ":" ++ second ++ "." ++ millisecond ++ "Z"
+
+
 type Msg
     = IncrementReps
     | ResetCounter
+    | Redirect
 
 
-update : Msg -> Model -> ( Model, Effect Msg )
-update msg model =
+update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
+update shared msg model =
     case msg of
         IncrementReps ->
             ( { model | currentReps = model.currentReps + 1 }
@@ -60,6 +130,16 @@ update msg model =
             , Effect.none
             )
 
+        Redirect ->
+            ( model
+            , case shared.currentBurpee of
+                Just _ ->
+                    Effect.pushRoutePath Route.Path.Counter
+
+                Nothing ->
+                    Effect.pushRoutePath Route.Path.PickVariant
+            )
+
 
 
 -- SUBSCRIPTIONS
@@ -67,7 +147,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Sub.map (\_ -> Redirect) (Time.every 10 identity)
 
 
 
@@ -76,145 +156,28 @@ subscriptions model =
 
 view : Shared.Model -> Model -> View Msg
 view shared model =
-    { title = "BurpeeBootcamp"
-    , body =
-        [ node "style" [] [ text """
-            @import url('https://fonts.googleapis.com/css2?family=Lora:wght@600&family=Nunito+Sans&display=swap');
-
-            html {
-                height: 100%;
-                color: #8B4513;
-                background: linear-gradient(#E6D5B8, #D2B48C);
-                -webkit-tap-highlight-color: transparent;
-            }
-            body {
-                display: flex;
-                flex-direction: column;
-                margin: 0;
-                justify-content: flex-start;
-                align-items: center;
-                min-height: -webkit-fill-available;
-                height: 100vh;
-                font-family: 'Nunito Sans';
-                padding: 0;
-                box-sizing: border-box;
-            }
-            h1 {
-                margin: 0.5rem 0;
-                font-weight: 600 !important;
-                font-family: 'Lora';
-                font-size: 1.5rem;
-                color: #8B4513;
-            }
-            .nose-button {
-                width: 100vw;
-                height: 60vh;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                background-color: rgba(210, 180, 140, 0.3);
-                cursor: pointer;
-                user-select: none;
-                -webkit-user-select: none;
-                transition: background-color 0.2s;
-                margin: 0;
-                touch-action: manipulation;
-                gap: 1rem;
-            }
-            .nose-button:active {
-                background-color: rgba(210, 180, 140, 0.5);
-            }
-            .counter {
-                font-size: 5rem;
-                font-weight: bold;
-                animation: scaleCount 0.3s ease-out;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 0.5rem;
-                color: #8B4513;
-            }
-            .reps-count {
-                font-size: 2rem;
-                opacity: 0.8;
-                font-weight: normal;
-                color: #A0522D;
-            }
-            @keyframes scaleCount {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.2); }
-                100% { transform: scale(1); }
-            }
-            .tap-text {
-                font-size: 1.2rem;
-                opacity: 0;
-                transition: opacity 0.3s;
-                color: #8B4513;
-            }
-            .tap-text.pulsing {
-                opacity: 1;
-                animation: pulse 1.5s ease-in-out infinite;
-            }
-            @keyframes pulse {
-                0% { transform: scale(1); opacity: 1; }
-                50% { transform: scale(1.1); opacity: 0.3; }
-                100% { transform: scale(1); opacity: 1; }
-            }
-            .reset-button {
-                cursor: pointer;
-                background-color: rgba(139, 69, 19, 0.2);
-                padding: 0.8rem 1.6rem;
-                border-radius: 8px;
-                user-select: none;
-                -webkit-user-select: none;
-                transition: background-color 0.2s;
-                margin-top: 1rem;
-                font-size: 0.9rem;
-                color: #8B4513;
-            }
-            .reset-button:active {
-                background-color: rgba(139, 69, 19, 0.3);
-            }
-            .container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                width: 100%;
-                height: 100%;
-            }
-            """ ]
-        , div [ class "container" ]
-            [ h1 [] [ text "BurpeeBootcamp" ]
-            , div
-                [ class "nose-button"
-                , onClick IncrementReps
-                ]
-                [ div
-                    [ class "counter"
-                    , style "animation-name"
-                        (if model.currentReps > 0 then
-                            "scaleCount"
-
-                         else
-                            "none"
-                        )
-                    ]
-                    [ text (String.fromInt model.currentReps)
-                    , div [ class "reps-count" ]
-                        [ text " / 20 reps" ]
-                    ]
-                , div
-                    [ class "tap-text"
-                    , classList [ ( "pulsing", model.currentReps == 0 ) ]
-                    ]
-                    [ text "TAP TO COUNT" ]
-                ]
-            , div
-                [ class "reset-button"
-                , onClick ResetCounter
-                ]
-                [ text "Reset Counter" ]
+    if shared.initializing then
+        { title = "BurpeeBootcamp"
+        , body =
+            [ div []
+                [ text "Loading..." ]
             ]
-        ]
-    }
+        }
+
+    else
+        case shared.currentBurpee of
+            Just burpee ->
+                { title = "BurpeeBootcamp"
+                , body =
+                    [ div []
+                        [ text "Redirecting to counter..." ]
+                    ]
+                }
+
+            Nothing ->
+                { title = "BurpeeBootcamp"
+                , body =
+                    [ div []
+                        [ text "Redirecting to burpee picker..." ]
+                    ]
+                }
