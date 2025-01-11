@@ -20,4 +20,6 @@ type Msg
     | StoreWorkoutResult WorkoutResult
     | GotPortMessage String
     | GotTimeForRepGoalCalculation Time.Posix
+    | GotTime Time.Posix
+    | GotTimeForFakedata Time.Posix
     | NoOp

@@ -50,6 +50,7 @@ type Msg
     | ResetCounter
     | GotWorkoutFinishedTime Time.Posix
     | GetWorkoutFinishedTime
+    | ChangeToMenu
 
 
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
@@ -78,8 +79,13 @@ update shared msg model =
                     , burpee = Maybe.withDefault Burpee.default shared.currentBurpee
                     , timestamp = time
                     }
-                , Effect.replaceRoutePath Route.Path.Home_
+                , Effect.replaceRoutePath Route.Path.Results
                 ]
+            )
+
+        ChangeToMenu ->
+            ( model
+            , Effect.replaceRoutePath Route.Path.Menu
             )
 
 
@@ -106,12 +112,19 @@ view shared model =
             , details [ class "mb-4" ]
                 [ summary [ class "text-sm text-amber-800 opacity-60 cursor-pointer select-none" ]
                     [ text "Show options" ]
-                , div [ class "flex gap-2 mt-2" ]
-                    [ button
-                        [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
-                        , onClick ResetCounter
+                , div [ class "flex justify-between gap-4 mt-2" ]
+                    [ div [ class "flex gap-4" ]
+                        [ button
+                            [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                            , onClick ResetCounter
+                            ]
+                            [ text "Reset Counter" ]
+                        , button
+                            [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                            , onClick ChangeToMenu
+                            ]
+                            [ text "Menu" ]
                         ]
-                        [ text "Reset Counter" ]
                     , button
                         [ class "px-6 py-3 rounded-lg bg-green-700/20 cursor-pointer select-none text-sm text-green-900 active:bg-green-700/30"
                         , onClick GetWorkoutFinishedTime

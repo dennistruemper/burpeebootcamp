@@ -9,7 +9,9 @@ import Url.Parser exposing ((</>))
 type Path
     = Home_
     | Counter
+    | Menu
     | PickVariant
+    | Results
     | NotFound_
 
 
@@ -35,8 +37,14 @@ fromString urlPath =
         "counter" :: [] ->
             Just Counter
 
+        "menu" :: [] ->
+            Just Menu
+
         "pick-variant" :: [] ->
             Just PickVariant
+
+        "results" :: [] ->
+            Just Results
 
         _ ->
             Nothing
@@ -59,8 +67,14 @@ toString path =
                 Counter ->
                     [ "counter" ]
 
+                Menu ->
+                    [ "menu" ]
+
                 PickVariant ->
                     [ "pick-variant" ]
+
+                Results ->
+                    [ "results" ]
 
                 NotFound_ ->
                     [ "404" ]
