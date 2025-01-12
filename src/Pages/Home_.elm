@@ -30,12 +30,12 @@ page shared route =
 
 
 type alias Model =
-    { currentReps : Int }
+    {}
 
 
 init : Shared.Model -> () -> ( Model, Effect Msg )
 init shared _ =
-    ( { currentReps = 0 }
+    ( {}
     , Effect.none
     )
 
@@ -112,24 +112,12 @@ toIsoDate time =
 
 
 type Msg
-    = IncrementReps
-    | ResetCounter
-    | Redirect
+    = Redirect
 
 
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
 update shared msg model =
     case msg of
-        IncrementReps ->
-            ( { model | currentReps = model.currentReps + 1 }
-            , Effect.none
-            )
-
-        ResetCounter ->
-            ( { model | currentReps = 0 }
-            , Effect.none
-            )
-
         Redirect ->
             ( model
             , case shared.initializing of

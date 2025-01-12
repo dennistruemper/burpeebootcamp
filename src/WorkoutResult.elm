@@ -8,6 +8,7 @@ import Time
 
 type alias WorkoutResult =
     { reps : Int
+    , repGoal : Maybe Int
     , burpee : Burpee
     , timestamp : Time.Posix
     }
@@ -15,9 +16,10 @@ type alias WorkoutResult =
 
 decodeJson : Json.Decode.Decoder WorkoutResult
 decodeJson =
-    Json.Decode.map3
+    Json.Decode.map4
         WorkoutResult
         (Json.Decode.field "reps" Json.Decode.int)
+        (Json.Decode.maybe (Json.Decode.field "repGoal" Json.Decode.int))
         (Json.Decode.field "burpee" Burpee.decodeJson)
         (Json.Decode.field "timestamp" decodePosix)
 
@@ -31,6 +33,12 @@ encodeJson : WorkoutResult -> Json.Encode.Value
 encodeJson workout =
     Json.Encode.object
         [ ( "reps", Json.Encode.int workout.reps )
+        , case workout.repGoal of
+            Just repGoal ->
+                ( "repGoal", Json.Encode.int repGoal )
+
+            Nothing ->
+                ( "repGoal", Json.Encode.null )
         , ( "burpee", Burpee.encodeJson workout.burpee )
         , ( "timestamp", Json.Encode.int (Time.posixToMillis workout.timestamp) )
         ]

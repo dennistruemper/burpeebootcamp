@@ -110,19 +110,24 @@ view : Shared.Model -> Model -> View Msg
 view shared model =
     { title = "Workout History"
     , body =
-        [ div [ class "results-container p-4" ]
-            [ div [ class "flex justify-between items-center mb-6" ]
-                [ h1 [ class "results-title text-2xl font-bold" ]
-                    [ text "Your Sessions" ]
-                , button
-                    [ class "px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-lg transform transition hover:scale-105"
-                    , onClick NavigateToMenu
+        case shared.initializing of
+            True ->
+                [ text "Loading..." ]
+
+            False ->
+                [ div [ class "results-container p-4" ]
+                    [ div [ class "flex justify-between items-center mb-6" ]
+                        [ h1 [ class "results-title text-2xl font-bold" ]
+                            [ text "Your Sessions" ]
+                        , button
+                            [ class "px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-lg transform transition hover:scale-105"
+                            , onClick NavigateToMenu
+                            ]
+                            [ text "Menu" ]
+                        ]
+                    , viewCalendar shared.workoutHistory model
                     ]
-                    [ text "Menu" ]
                 ]
-            , viewCalendar shared.workoutHistory model
-            ]
-        ]
     }
 
 
@@ -205,7 +210,7 @@ viewCalendar workouts model =
                                         |> List.map (\_ -> { time = Time.millisToPosix (Time.posixToMillis lastDate.time + oneMonthInMillis), isDummy = True })
 
                                 result =
-                                    Debug.log "paddingDates" (paddingDates ++ dates_)
+                                    paddingDates ++ dates_
                             in
                             result
 
@@ -363,7 +368,14 @@ viewCalendar workouts model =
         -- Only show slider if we have more than 40 days of history
         showSlider : Bool
         showSlider =
-            maxDaysToShow > 40
+            let
+                _ =
+                    Debug.log "maxDaysToShow" maxDaysToShow
+            in
+            Debug.log "maxDaysToShow"
+                (maxDaysToShow
+                    /= 40
+                )
 
         viewDay : Time.Posix -> Bool -> Html Msg
         viewDay date isDummy =

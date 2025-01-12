@@ -29,6 +29,73 @@ page shared route =
 -- INIT
 
 
+calculateNextGoal : Shared.Model -> Int
+calculateNextGoal shared =
+    let
+        lastWorkout =
+            shared.workoutHistory |> List.sortBy (\workout -> workout.timestamp |> Time.posixToMillis) |> List.reverse |> List.head
+
+        _ =
+            Debug.log "lastWorkout" lastWorkout
+
+        daysSinceLastWorkout =
+            case lastWorkout of
+                Just workout ->
+                    Time.posixToMillis shared.currentTime
+                        - Time.posixToMillis workout.timestamp
+                        |> (\ms ->
+                                let
+                                    _ =
+                                        Debug.log "ms" ms
+                                in
+                                toFloat ms / (1000 * 60 * 60 * 24)
+                           )
+                        |> floor
+
+                Nothing ->
+                    Debug.log "No last workout" 999
+
+        _ =
+            Debug.log "daysSinceLastWorkout" daysSinceLastWorkout
+
+        wasGoalReached =
+            case lastWorkout of
+                Just workout ->
+                    Maybe.map2 (\goal reps -> reps >= goal) workout.repGoal (Just workout.reps)
+                        |> Maybe.withDefault False
+
+                Nothing ->
+                    False
+
+        adjustedGoal =
+            if daysSinceLastWorkout <= 1 then
+                -- Yesterday's workout
+                case lastWorkout of
+                    Just lw ->
+                        if wasGoalReached then
+                            (lw.repGoal |> Maybe.withDefault 10) + 1
+
+                        else
+                            lw.repGoal |> Maybe.withDefault 10
+
+                    Nothing ->
+                        10
+
+            else
+                -- Missed days
+                case lastWorkout of
+                    Just lw ->
+                        (lw.repGoal |> Maybe.withDefault 10) - (2 * (daysSinceLastWorkout - 1))
+
+                    Nothing ->
+                        10
+
+        _ =
+            Debug.log "adjustedGoal" adjustedGoal
+    in
+    Basics.max 10 adjustedGoal
+
+
 type alias Model =
     { currentReps : Int
     }
@@ -78,6 +145,7 @@ update shared msg model =
                     { reps = model.currentReps
                     , burpee = Maybe.withDefault Burpee.default shared.currentBurpee
                     , timestamp = time
+                    , repGoal = Just (calculateNextGoal shared)
                     }
                 , Effect.replaceRoutePath Route.Path.Results
                 ]
@@ -106,70 +174,75 @@ view : Shared.Model -> Model -> View Msg
 view shared model =
     { title = "BurpeeBootcamp"
     , body =
-        [ div [ class "flex flex-col items-center w-full h-screen" ]
-            [ h1 [ class "mt-2 mb-2 font-semibold font-lora text-xl text-amber-800" ]
-                [ img
-                    [ src "/logo/logo.png"
-                    , class "h-32" -- Adjust height as needed
-                    , alt "BurpeeBootcamp"
-                    ]
-                    []
-                ]
-            , details [ class "mb-4" ]
-                [ summary [ class "text-sm text-amber-800 opacity-60 cursor-pointer select-none" ]
-                    [ text "Show options" ]
-                , div [ class "flex justify-between gap-4 mt-2" ]
-                    [ div [ class "flex gap-4" ]
-                        [ button
-                            [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
-                            , onClick ResetCounter
+        case shared.initializing of
+            True ->
+                [ text "Initializing..." ]
+
+            False ->
+                [ div [ class "flex flex-col items-center w-full h-screen" ]
+                    [ h1 [ class "mt-2 mb-2 font-semibold font-lora text-xl text-amber-800" ]
+                        [ img
+                            [ src "/logo/logo.png"
+                            , class "h-32" -- Adjust height as needed
+                            , alt "BurpeeBootcamp"
                             ]
-                            [ text "Reset Counter" ]
-                        , button
-                            [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
-                            , onClick ChangeToMenu
+                            []
+                        ]
+                    , details [ class "mb-4" ]
+                        [ summary [ class "text-sm text-amber-800 opacity-60 cursor-pointer select-none" ]
+                            [ text "Show options" ]
+                        , div [ class "flex justify-between gap-4 mt-2" ]
+                            [ div [ class "flex gap-4" ]
+                                [ button
+                                    [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                                    , onClick ResetCounter
+                                    ]
+                                    [ text "Reset Counter" ]
+                                , button
+                                    [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                                    , onClick ChangeToMenu
+                                    ]
+                                    [ text "Menu" ]
+                                ]
+                            , button
+                                [ class "px-6 py-3 rounded-lg bg-green-700/20 cursor-pointer select-none text-sm text-green-900 active:bg-green-700/30"
+                                , onClick GetWorkoutFinishedTime
+                                ]
+                                [ text "Done" ]
                             ]
-                            [ text "Menu" ]
                         ]
-                    , button
-                        [ class "px-6 py-3 rounded-lg bg-green-700/20 cursor-pointer select-none text-sm text-green-900 active:bg-green-700/30"
-                        , onClick GetWorkoutFinishedTime
+                    , div
+                        [ class "w-screen flex-1 flex flex-col items-center justify-center bg-amber-100/30 cursor-pointer select-none touch-manipulation relative"
+                        , onClick IncrementReps
                         ]
-                        [ text "Done" ]
+                        [ div [ class "absolute inset-0 grid grid-cols-2 xl:grid-cols-4 gap-4 place-items-center place-content-center pointer-events-none overflow-hidden" ]
+                            (List.repeat 20
+                                (div [ class "text-amber-800/5 text-4xl font-bold rotate-[-20deg] text-center" ]
+                                    [ text "NOSE TAP AREA" ]
+                                )
+                            )
+                        , div
+                            [ class "flex flex-col items-center gap-2 relative"
+                            , classList
+                                [ ( "animate-scale-count", model.currentReps > 0 )
+                                ]
+                            ]
+                            [ div [ class "text-amber-800 opacity-80 text-sm mb-2" ]
+                                [ text (Maybe.withDefault Burpee.default shared.currentBurpee |> Burpee.getDisplayName) ]
+                            , div [ class "text-6xl font-bold text-amber-900" ]
+                                [ text (String.fromInt model.currentReps) ]
+                            , div [ class "text-2xl opacity-80 text-amber-800" ]
+                                [ text <| " / " ++ String.fromInt (calculateNextGoal shared) ++ " reps" ]
+                            ]
+                        , div
+                            [ class "text-lg text-amber-800 transition-opacity duration-300"
+                            , classList
+                                [ ( "opacity-0", model.currentReps > 0 )
+                                , ( "opacity-100 animate-pulse", model.currentReps == 0 )
+                                ]
+                            ]
+                            [ text "TAP TO COUNT" ]
+                        ]
                     ]
                 ]
-            , div
-                [ class "w-screen flex-1 flex flex-col items-center justify-center bg-amber-100/30 cursor-pointer select-none touch-manipulation relative"
-                , onClick IncrementReps
-                ]
-                [ div [ class "absolute inset-0 grid grid-cols-2 xl:grid-cols-4 gap-4 place-items-center place-content-center pointer-events-none overflow-hidden" ]
-                    (List.repeat 20
-                        (div [ class "text-amber-800/5 text-4xl font-bold rotate-[-20deg] text-center" ]
-                            [ text "NOSE TAP AREA" ]
-                        )
-                    )
-                , div
-                    [ class "flex flex-col items-center gap-2 relative"
-                    , classList
-                        [ ( "animate-scale-count", model.currentReps > 0 )
-                        ]
-                    ]
-                    [ div [ class "text-amber-800 opacity-80 text-sm mb-2" ]
-                        [ text (Maybe.withDefault Burpee.default shared.currentBurpee |> Burpee.getDisplayName) ]
-                    , div [ class "text-6xl font-bold text-amber-900" ]
-                        [ text (String.fromInt model.currentReps) ]
-                    , div [ class "text-2xl opacity-80 text-amber-800" ]
-                        [ text <| " / " ++ String.fromInt shared.currentRepGoal ++ " reps" ]
-                    ]
-                , div
-                    [ class "text-lg text-amber-800 transition-opacity duration-300"
-                    , classList
-                        [ ( "opacity-0", model.currentReps > 0 )
-                        , ( "opacity-100 animate-pulse", model.currentReps == 0 )
-                        ]
-                    ]
-                    [ text "TAP TO COUNT" ]
-                ]
-            ]
-        ]
     }

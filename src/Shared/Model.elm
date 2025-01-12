@@ -1,9 +1,10 @@
-module Shared.Model exposing (Model, WorkoutResult)
+module Shared.Model exposing (Model)
 
 {-| -}
 
 import Burpee exposing (Burpee)
 import Time
+import WorkoutResult exposing (WorkoutResult)
 
 
 {-| Normally, this value would live in "Shared.elm"
@@ -15,14 +16,7 @@ own file, so they can be imported by `Effect.elm`
 -}
 type alias Model =
     { currentBurpee : Maybe Burpee
-    , currentRepGoal : Int
     , workoutHistory : List WorkoutResult
     , initializing : Bool
-    }
-
-
-type alias WorkoutResult =
-    { reps : Int
-    , burpee : Burpee
-    , timestamp : Time.Posix
+    , currentTime : Time.Posix
     }
