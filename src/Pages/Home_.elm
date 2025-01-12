@@ -113,6 +113,7 @@ toIsoDate time =
 
 type Msg
     = Redirect
+    | NoOp
 
 
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
@@ -132,6 +133,9 @@ update shared msg model =
                         Nothing ->
                             Effect.pushRoutePath Route.Path.PickVariant
             )
+
+        NoOp ->
+            ( model, Effect.none )
 
 
 

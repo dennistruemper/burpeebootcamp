@@ -1,4 +1,4 @@
-module Pages.Results exposing (Model, Msg, page)
+module Pages.Results exposing (Model, Msg(..), page)
 
 import Burpee exposing (Burpee)
 import Dict

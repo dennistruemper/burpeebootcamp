@@ -1,4 +1,4 @@
-module Pages.Menu exposing (Model, Msg, page)
+module Pages.Menu exposing (Model, Msg(..), page)
 
 import Dict
 import Effect exposing (Effect)
