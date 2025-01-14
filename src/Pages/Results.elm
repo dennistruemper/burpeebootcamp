@@ -6,6 +6,7 @@ import Effect exposing (Effect)
 import Html exposing (Html, button, div, h1, h2, h3, input, span, text, time)
 import Html.Attributes exposing (class, datetime, max, min, style, title, type_, value)
 import Html.Events exposing (onClick, onInput)
+import Json.Decode as Decode
 import Page exposing (Page)
 import Route exposing (Route)
 import Route.Path
@@ -58,6 +59,8 @@ type Msg
     | UpdateDaysToShow Int
     | NavigateToMenu
     | TogglePopover (Maybe Time.Posix)
+    | NoOp
+    | CloseSlider
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -89,6 +92,14 @@ update msg model =
 
         TogglePopover maybeDate ->
             ( { model | popoverDay = maybeDate }
+            , Effect.none
+            )
+
+        NoOp ->
+            ( model, Effect.none )
+
+        CloseSlider ->
+            ( { model | popoverDay = Nothing }
             , Effect.none
             )
 
@@ -495,68 +506,52 @@ isSameDay date1 date2 =
 
 viewPopover : DayStats -> Html Msg
 viewPopover dayStats =
-    let
-        weekday =
-            Time.toWeekday Time.utc dayStats.timestamp
-
-        isFirstColumn =
-            weekday == Time.Mon
-
-        isLastColumn =
-            weekday == Time.Sun
-
-        ( positionClasses, arrowClasses ) =
-            if isFirstColumn then
-                ( "left-full top-1/2 -translate-y-1/2 ml-2"
-                , "absolute top-1/2 -translate-y-1/2 -left-1.5 w-3 h-3 rotate-45 bg-white border-l border-b border-amber-200"
-                )
-
-            else if isLastColumn then
-                ( "right-full top-1/2 -translate-y-1/2 mr-2"
-                , "absolute top-1/2 -translate-y-1/2 -right-1.5 w-3 h-3 rotate-45 bg-white border-t border-r border-amber-200"
-                )
-
-            else
-                ( "left-1/2 -translate-x-1/2 top-0 -translate-y-full mt-[-8px]"
-                , "absolute top-full left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-l border-b border-amber-200"
-                )
-
-        -- Format time as HH:MM
-        formatTime : Time.Posix -> String
-        formatTime time =
-            String.padLeft 2 '0' (String.fromInt (Time.toHour Time.utc time))
-                ++ ":"
-                ++ String.padLeft 2 '0' (String.fromInt (Time.toMinute Time.utc time))
-    in
     div
         [ class """
-            absolute z-10
-            bg-white p-3 rounded-lg shadow-lg border border-amber-200
-            min-w-[200px] max-w-[250px]
-            transform origin-bottom
+            fixed inset-0 z-50
+            flex justify-end
+            bg-black/30
+            transition-opacity duration-300
           """
-        , class positionClasses
-        , style "filter" "drop-shadow(0 2px 4px rgba(0,0,0,0.1))"
+        , onClick CloseSlider -- Close when clicking backdrop
         ]
-        [ div [ class "relative" ]
-            [ button
-                [ class """
-                    absolute -top-1 -right-1 w-5 h-5
-                    flex items-center justify-center
-                    rounded-full bg-amber-100 hover:bg-amber-200
-                    text-amber-800 text-sm
-                    transition-colors
-                  """
-                , onClick (TogglePopover Nothing)
-                ]
-                [ text "×" ]
-            , div [ class "text-sm space-y-2" ]
-                [ div [ class "font-medium text-amber-900" ]
+        [ div
+            [ class """
+                w-full max-w-md h-full
+                bg-white shadow-xl
+                transform transition-transform duration-300 ease-out
+                translate-x-0
+                animate-slide-in
+                overflow-y-auto
+              """
+            , style "min-width" "320px"
+            , onClick NoOp -- Prevent clicks inside panel from closing
+            ]
+            [ div [ class "sticky top-0 bg-white border-b border-amber-100 p-4 flex justify-between items-center" ]
+                [ div [ class "text-lg font-medium text-amber-900" ]
                     [ text (formatDate dayStats.timestamp) ]
-                , div [ class "text-amber-800" ]
-                    [ div [] [ text ("Total reps: " ++ String.fromInt dayStats.totalReps) ]
+                , button
+                    [ class """
+                        w-8 h-8
+                        flex items-center justify-center
+                        rounded-full
+                        bg-amber-100 hover:bg-amber-200
+                        text-amber-800 text-lg
+                        transition-colors
+                      """
+                    , onClick CloseSlider
+                    ]
+                    [ text "×" ]
+                ]
+            , div [ class "p-4 space-y-6" ]
+                [ div [ class "space-y-2" ]
+                    [ div [ class "text-2xl font-bold text-amber-900" ]
+                        [ text (String.fromInt dayStats.totalReps)
+                        , span [ class "text-lg font-normal text-amber-700 ml-2" ]
+                            [ text "total reps" ]
+                        ]
                     , if dayStats.sessionCount > 1 then
-                        div []
+                        div [ class "text-amber-800" ]
                             [ div [] [ text ("Sessions: " ++ String.fromInt dayStats.sessionCount) ]
                             , div [] [ text ("Average: " ++ String.fromInt (dayStats.totalReps // dayStats.sessionCount) ++ " per session") ]
                             ]
@@ -564,17 +559,24 @@ viewPopover dayStats =
                       else
                         text ""
                     ]
-                , div [ class "mt-2 space-y-1" ]
-                    (List.map
-                        (\session ->
-                            div [ class "text-xs text-amber-700" ]
-                                [ text (formatTime session.timestamp ++ ": " ++ String.fromInt session.reps ++ " reps") ]
+                , div [ class "border-t border-amber-100 pt-4" ]
+                    [ div [ class "text-sm font-medium text-amber-800 mb-3" ]
+                        [ text "Sessions" ]
+                    , div [ class "space-y-3" ]
+                        (List.map
+                            (\session ->
+                                div [ class "flex items-center justify-between p-3 bg-amber-50 rounded-lg" ]
+                                    [ div [ class "text-amber-800" ]
+                                        [ text (formatTime session.timestamp) ]
+                                    , div [ class "font-medium text-amber-900" ]
+                                        [ text (String.fromInt session.reps ++ " reps") ]
+                                    ]
+                            )
+                            dayStats.sessions
                         )
-                        dayStats.sessions
-                    )
+                    ]
                 ]
             ]
-        , div [ class arrowClasses ] []
         ]
 
 
@@ -871,3 +873,22 @@ type alias DayStats =
     , timestamp : Time.Posix
     , sessions : List WorkoutResult
     }
+
+
+stopPropagation : msg -> Html.Attribute msg
+stopPropagation msg =
+    Html.Events.stopPropagationOn "click" (Decode.succeed ( msg, True ))
+
+
+formatTime : Time.Posix -> String
+formatTime time =
+    let
+        hour =
+            String.fromInt (Time.toHour Time.utc time)
+                |> String.padLeft 2 '0'
+
+        minute =
+            String.fromInt (Time.toMinute Time.utc time)
+                |> String.padLeft 2 '0'
+    in
+    hour ++ ":" ++ minute
