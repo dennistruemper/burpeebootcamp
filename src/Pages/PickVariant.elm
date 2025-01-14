@@ -160,9 +160,41 @@ view model =
 
 viewVariantList : List Burpee.Burpee -> Maybe Burpee.Burpee -> Html.Html Msg
 viewVariantList variants selectedVariant =
+    let
+        sortedVariants =
+            variants
+                |> List.sortBy Burpee.calculateDifficulty
+
+        ( easyVariants, remainingVariants ) =
+            List.partition (\b -> Burpee.calculateDifficulty b <= 25) sortedVariants
+
+        ( mediumVariants, hardAndVeryHard ) =
+            List.partition (\b -> Burpee.calculateDifficulty b <= 73) remainingVariants
+
+        ( hardVariants, veryHardVariants ) =
+            List.partition (\b -> Burpee.calculateDifficulty b <= 130) hardAndVeryHard
+
+        sectionHeader text =
+            Html.h2
+                [ class "col-span-1 md:col-span-2 text-xl font-semibold text-amber-800 mt-6 first:mt-0" ]
+                [ Html.text text ]
+
+        variantSection headerText variants_ =
+            if List.isEmpty variants_ then
+                []
+
+            else
+                sectionHeader headerText :: List.map viewVariant variants_
+    in
     Html.div
         [ class "max-w-3xl mx-auto grid gap-4 grid-cols-1 md:grid-cols-2" ]
-        (List.map viewVariant variants)
+        (List.concat
+            [ variantSection "Beginner Friendly 🌱" easyVariants
+            , variantSection "Intermediate 💪" mediumVariants
+            , variantSection "Advanced 🔥" hardVariants
+            , variantSection "Expert 🏆" veryHardVariants
+            ]
+        )
 
 
 viewVariant : Burpee.Burpee -> Html.Html Msg
