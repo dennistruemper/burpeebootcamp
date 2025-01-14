@@ -780,6 +780,9 @@
   .w-12 {
     width: calc(var(--spacing) * 12);
   }
+  .w-24 {
+    width: calc(var(--spacing) * 24);
+  }
   .w-64 {
     width: calc(var(--spacing) * 64);
   }
@@ -1014,6 +1017,9 @@
   }
   .overflow-hidden {
     overflow: hidden;
+  }
+  .rounded {
+    border-radius: 0.25rem;
   }
   .rounded-full {
     border-radius: calc(infinity * 1px);
@@ -1487,6 +1493,45 @@
   .active\:bg-green-700\/30 {
     &:active {
       background-color: color-mix(in oklab, var(--color-green-700) 30%, transparent);
+    }
+  }
+  .enabled\:bg-amber-600 {
+    &:enabled {
+      background-color: var(--color-amber-600);
+    }
+  }
+  .enabled\:text-white {
+    &:enabled {
+      color: var(--color-white);
+    }
+  }
+  .enabled\:hover\:bg-amber-700 {
+    &:enabled {
+      &:hover {
+        @media (hover: hover) {
+          background-color: var(--color-amber-700);
+        }
+      }
+    }
+  }
+  .disabled\:cursor-not-allowed {
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+  .disabled\:bg-gray-300 {
+    &:disabled {
+      background-color: var(--color-gray-300);
+    }
+  }
+  .disabled\:text-gray-500 {
+    &:disabled {
+      color: var(--color-gray-500);
+    }
+  }
+  .disabled\:opacity-50 {
+    &:disabled {
+      opacity: 50%;
     }
   }
   .sm\:grid-cols-3 {

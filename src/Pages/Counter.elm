@@ -2,6 +2,7 @@ module Pages.Counter exposing (Model, Msg(..), page)
 
 import Bridge
 import Burpee exposing (Burpee)
+import Dict
 import Effect exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -18,7 +19,7 @@ import View exposing (View)
 page : Shared.Model -> Route () -> Page Model Msg
 page shared route =
     Page.new
-        { init = init
+        { init = init route
         , update = update shared
         , subscriptions = subscriptions
         , view = view shared
@@ -29,8 +30,8 @@ page shared route =
 -- INIT
 
 
-calculateNextGoal : Shared.Model -> Int
-calculateNextGoal shared =
+calculateNextGoal : Shared.Model -> Model -> Int
+calculateNextGoal shared model =
     let
         lastWorkout =
             shared.workoutHistory |> List.sortBy (\workout -> workout.timestamp |> Time.posixToMillis) |> List.reverse |> List.head
@@ -93,17 +94,25 @@ calculateNextGoal shared =
         _ =
             Debug.log "adjustedGoal" adjustedGoal
     in
-    Basics.max 10 adjustedGoal
+    case model.overwriteRepGoal of
+        Just repGoal ->
+            Basics.max 10 repGoal
+
+        Nothing ->
+            Basics.max 10 adjustedGoal
 
 
 type alias Model =
     { currentReps : Int
+    , overwriteRepGoal : Maybe Int
     }
 
 
-init : () -> ( Model, Effect Msg )
-init _ =
-    ( { currentReps = 0 }
+init : Route () -> () -> ( Model, Effect Msg )
+init route _ =
+    ( { currentReps = 0
+      , overwriteRepGoal = Dict.get "repGoal" route.query |> Maybe.map String.toInt |> Maybe.withDefault Nothing
+      }
     , Effect.none
     )
 
@@ -145,7 +154,7 @@ update shared msg model =
                     { reps = model.currentReps
                     , burpee = Maybe.withDefault Burpee.default shared.currentBurpee
                     , timestamp = time
-                    , repGoal = Just (calculateNextGoal shared)
+                    , repGoal = Just (calculateNextGoal shared model)
                     }
                 , Effect.replaceRoutePath Route.Path.Results
                 ]
@@ -232,7 +241,7 @@ view shared model =
                             , div [ class "text-6xl font-bold text-amber-900" ]
                                 [ text (String.fromInt model.currentReps) ]
                             , div [ class "text-2xl opacity-80 text-amber-800" ]
-                                [ text <| " / " ++ String.fromInt (calculateNextGoal shared) ++ " reps" ]
+                                [ text <| " / " ++ String.fromInt (calculateNextGoal shared model) ++ " reps" ]
                             ]
                         , div
                             [ class "text-lg text-amber-800 transition-opacity duration-300"

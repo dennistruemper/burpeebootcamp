@@ -80,7 +80,7 @@ view model =
                 [ text "BurpeeBootcamp Menu" ]
             , div [ class "flex flex-col gap-4 w-full max-w-md px-4" ]
                 [ menuButton "Counter" Route.Path.Counter
-                , menuButton "Pick Variant" Route.Path.PickVariant
+                , menuButton "Adjust Training Plan" Route.Path.PickVariant
                 , menuButton "Results" Route.Path.Results
                 ]
             ]
