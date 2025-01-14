@@ -2,6 +2,7 @@ module Pages.Home_ exposing (Model, Msg(..), page)
 
 import Bridge
 import Burpee
+import Dict
 import Effect exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -131,7 +132,7 @@ update shared msg model =
                             Effect.pushRoutePath Route.Path.Counter
 
                         Nothing ->
-                            Effect.pushRoutePath Route.Path.PickVariant
+                            Effect.pushRoute { path = Route.Path.PickVariant, query = Dict.fromList [ ( "first", "true" ) ], hash = Nothing }
             )
 
         NoOp ->

@@ -17,7 +17,7 @@ import View exposing (View)
 page : Shared.Model -> Route () -> Page Model Msg
 page shared route =
     Page.new
-        { init = init
+        { init = init route
         , update = update
         , subscriptions = subscriptions
         , view = view
@@ -32,14 +32,16 @@ type alias Model =
     { variants : List Burpee.Burpee
     , selectedVariant : Maybe Burpee.Burpee
     , goalInput : String
+    , first : Bool
     }
 
 
-init : () -> ( Model, Effect Msg )
-init () =
+init : Route () -> () -> ( Model, Effect Msg )
+init route () =
     ( { variants = Burpee.variations
       , selectedVariant = Nothing
       , goalInput = ""
+      , first = Dict.get "first" route.query |> Maybe.map (\first -> first == "true") |> Maybe.withDefault False
       }
     , Effect.none
     )
@@ -61,9 +63,19 @@ update : Msg -> Model -> ( Model, Effect Msg )
 update msg model =
     case msg of
         PickedVariant burpee ->
-            ( { model | selectedVariant = Just burpee }
-            , Effect.none
-            )
+            if model.first then
+                ( model
+                , Effect.batch
+                    [ Effect.newCurrentBurpee burpee
+                    , Effect.storeBurpeeVariant burpee
+                    , Effect.pushRoute { path = Route.Path.Counter, query = Dict.fromList [ ( "repGoal", "10" ) ], hash = Nothing }
+                    ]
+                )
+
+            else
+                ( { model | selectedVariant = Just burpee }
+                , Effect.none
+                )
 
         UpdateGoalInput input ->
             ( { model | goalInput = input }
@@ -112,47 +124,61 @@ view model =
             , case model.selectedVariant of
                 Nothing ->
                     div [ class "mb-6" ]
-                        [ h2 [ class "text-xl mb-2" ] [ text "Choose Burpee Variant" ]
+                        [ div [ class "mb-8 max-w-3xl mx-auto" ]
+                            [ p [ class "text-lg text-amber-900 mb-4" ]
+                                [ text "Choose your starting point wisely! The key to mastering burpees is progressive overload - we'll work our way up to 100 repetitions together. 💪" ]
+                            , div [ class "bg-amber-50 border-l-4 border-amber-600 p-4" ]
+                                [ p [ class "text-amber-800 mb-2" ]
+                                    [ text "Pro tip: Pick a variation where you can easily do 10 repetitions with good form. This isn't about pushing to your limits today - it's about building a strong foundation for tomorrow." ]
+                                , p [ class "text-amber-700" ]
+                                    [ text "Remember: The best progression is the one you can stick with. Start easy, stay consistent, and watch yourself grow stronger day by day! 🌱 → 🌳" ]
+                                ]
+                            ]
+                        , h2 [ class "text-xl mb-2" ] [ text "Choose Burpee Variant" ]
                         , viewVariantList model.variants model.selectedVariant
                         ]
 
                 Just selectedBurpee ->
-                    div [ class "mb-6" ]
-                        [ h2 [ class "text-xl mb-2" ] [ text <| "Set Goal for " ++ Burpee.getDisplayName selectedBurpee ]
-                        , div [ class "mb-4" ]
-                            [ input
-                                [ type_ "number"
-                                , class "w-24 p-2 border rounded"
-                                , value model.goalInput
-                                , onInput UpdateGoalInput
-                                , Html.Attributes.min "10"
+                    if model.first then
+                        div [] []
+
+                    else
+                        div [ class "mb-6" ]
+                            [ h2 [ class "text-xl mb-2" ] [ text <| "Set Goal for " ++ Burpee.getDisplayName selectedBurpee ]
+                            , div [ class "mb-4" ]
+                                [ input
+                                    [ type_ "number"
+                                    , class "w-24 p-2 border rounded"
+                                    , value model.goalInput
+                                    , onInput UpdateGoalInput
+                                    , Html.Attributes.min "10"
+                                    ]
+                                    []
                                 ]
-                                []
+                            , div [ class "flex gap-4" ]
+                                [ button
+                                    [ class """
+                                        px-4 py-2 rounded
+                                        disabled:opacity-50 disabled:cursor-not-allowed
+                                        enabled:bg-amber-600 enabled:text-white enabled:hover:bg-amber-700
+                                        disabled:bg-gray-300 disabled:text-gray-500
+                                      """
+                                    , onClick StartWorkout
+                                    , disabled (String.isEmpty model.goalInput)
+                                    ]
+                                    [ text "Start Workout" ]
+                                , button
+                                    [ class "px-4 py-2 border rounded"
+                                    , onClick BackToSelection
+                                    ]
+                                    [ text "Back to Selection" ]
+                                , button
+                                    [ class "px-4 py-2 border rounded"
+                                    , onClick NavigateBack
+                                    ]
+                                    [ text "Cancel" ]
+                                ]
                             ]
-                        , div [ class "flex gap-4" ]
-                            [ button
-                                [ class """
-                                    px-4 py-2 rounded
-                                    disabled:opacity-50 disabled:cursor-not-allowed
-                                    enabled:bg-amber-600 enabled:text-white enabled:hover:bg-amber-700
-                                    disabled:bg-gray-300 disabled:text-gray-500
-                                  """
-                                , onClick StartWorkout
-                                , disabled (String.isEmpty model.goalInput)
-                                ]
-                                [ text "Start Workout" ]
-                            , button
-                                [ class "px-4 py-2 border rounded"
-                                , onClick BackToSelection
-                                ]
-                                [ text "Back to Selection" ]
-                            , button
-                                [ class "px-4 py-2 border rounded"
-                                , onClick NavigateBack
-                                ]
-                                [ text "Cancel" ]
-                            ]
-                        ]
             ]
         ]
     }
@@ -192,7 +218,7 @@ viewVariantList variants selectedVariant =
             [ variantSection "Beginner Friendly 🌱" easyVariants
             , variantSection "Intermediate 💪" mediumVariants
             , variantSection "Advanced 🔥" hardVariants
-            , variantSection "Expert 🏆" veryHardVariants
+            , variantSection "Expert 🌳" veryHardVariants
             ]
         )
 
