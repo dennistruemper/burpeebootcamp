@@ -108,7 +108,7 @@ subscriptions _ =
 
 view : Shared.Model -> Model -> View Msg
 view shared model =
-    { title = "Workout History"
+    { title = "Practice History - BurpeeBootcamp"
     , body =
         case shared.initializing of
             True ->
@@ -118,7 +118,7 @@ view shared model =
                 [ div [ class "results-container p-4" ]
                     [ div [ class "flex justify-between items-center mb-6" ]
                         [ h1 [ class "results-title text-2xl font-bold" ]
-                            [ text "Your Sessions" ]
+                            [ text "Your Practice Sessions" ]
                         , button
                             [ class "px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-lg transform transition hover:scale-105"
                             , onClick NavigateToMenu

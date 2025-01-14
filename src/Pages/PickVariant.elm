@@ -105,10 +105,10 @@ subscriptions model =
 
 view : Model -> View Msg
 view model =
-    { title = "Pick Your Next Workout"
+    { title = "Adjust Training Plan"
     , body =
         [ div [ class "p-4" ]
-            [ h1 [ class "text-2xl mb-4" ] [ text "Set Up Next Workout" ]
+            [ h1 [ class "text-2xl mb-4" ] [ text "Adjust Training Plan" ]
             , case model.selectedVariant of
                 Nothing ->
                     div [ class "mb-6" ]

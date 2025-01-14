@@ -6,6 +6,10 @@ import Json.Encode
 import Time
 
 
+{-| Represents a practice session result.
+Despite the name "WorkoutResult", this represents a practice session
+following the "greasing the groove" methodology rather than an intense workout.
+-}
 type alias WorkoutResult =
     { reps : Int
     , repGoal : Maybe Int
