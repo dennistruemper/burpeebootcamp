@@ -19,7 +19,7 @@ import View exposing (View)
 page : Shared.Model -> Route () -> Page Model Msg
 page shared route =
     Page.new
-        { init = init route
+        { init = init shared route
         , update = update shared
         , subscriptions = subscriptions
         , view = view shared
@@ -105,13 +105,15 @@ calculateNextGoal shared model =
 type alias Model =
     { currentReps : Int
     , overwriteRepGoal : Maybe Int
+    , initialShowWelcomeModal : Bool
     }
 
 
-init : Route () -> () -> ( Model, Effect Msg )
-init route _ =
+init : Shared.Model -> Route () -> () -> ( Model, Effect Msg )
+init shared route _ =
     ( { currentReps = 0
       , overwriteRepGoal = Dict.get "repGoal" route.query |> Maybe.map String.toInt |> Maybe.withDefault Nothing
+      , initialShowWelcomeModal = List.isEmpty shared.workoutHistory
       }
     , Effect.none
     )
@@ -127,6 +129,7 @@ type Msg
     | GotWorkoutFinishedTime Time.Posix
     | GetWorkoutFinishedTime
     | ChangeToMenu
+    | CloseWelcomeModal
 
 
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
@@ -165,6 +168,11 @@ update shared msg model =
             , Effect.replaceRoutePath Route.Path.Menu
             )
 
+        CloseWelcomeModal ->
+            ( { model | initialShowWelcomeModal = False }
+            , Effect.none
+            )
+
 
 
 -- SUBSCRIPTIONS
@@ -188,7 +196,11 @@ view shared model =
                 [ text "Initializing..." ]
 
             False ->
-                [ div [ class "flex flex-col items-center w-full h-screen" ]
+                let
+                    updatedShowWelcomeModal =
+                        List.isEmpty shared.workoutHistory
+                in
+                [ div [ class "flex flex-col items-center w-full h-screen relative" ]
                     [ h1 [ class "mt-2 mb-2 font-semibold font-lora text-xl text-amber-800" ]
                         [ img
                             [ src "/logo/logo.png"
@@ -242,6 +254,11 @@ view shared model =
                                 [ text (String.fromInt model.currentReps) ]
                             , div [ class "text-2xl opacity-80 text-amber-800" ]
                                 [ text <| " / " ++ String.fromInt (calculateNextGoal shared model) ++ " reps" ]
+                            , div [ class "text-sm text-amber-800/70 mt-2 italic text-center" ]
+                                [ text "Take active rest by slow running in place"
+                                , br [] []
+                                , text "Just don't stop until you're done!"
+                                ]
                             ]
                         , div
                             [ class "text-lg text-amber-800 transition-opacity duration-300"
@@ -252,6 +269,34 @@ view shared model =
                             ]
                             [ text "TAP TO COUNT" ]
                         ]
+                    , if model.initialShowWelcomeModal && updatedShowWelcomeModal then
+                        div [ class "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" ]
+                            [ div [ class "bg-white p-6 rounded-lg shadow-xl max-w-sm mx-4" ]
+                                [ h3 [ class "text-xl font-bold text-amber-900 mb-4" ]
+                                    [ text "Welcome to Burpee Bootcamp! 👋" ]
+                                , div [ class "space-y-4 text-amber-800" ]
+                                    [ p []
+                                        [ text "Here's how to count your burpees:" ]
+                                    , ul [ class "list-disc list-inside space-y-2" ]
+                                        [ li [] [ text "Place your phone on the floor" ]
+                                        , li [] [ text "Do your burpee" ]
+                                        , li [] [ text "At the bottom position, tap the screen with your nose" ]
+                                        ]
+                                    , p [ class "mt-4" ]
+                                        [ text "Take active rest by slow running in place between reps. Just don't stop until you're done!" ]
+                                    , p [ class "italic mt-4" ]
+                                        [ text "Let's grow stronger together! 🌱 → 🌳" ]
+                                    ]
+                                , button
+                                    [ class "mt-6 w-full px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                                    , onClick CloseWelcomeModal
+                                    ]
+                                    [ text "Got it, let's start! 💪" ]
+                                ]
+                            ]
+
+                      else
+                        text ""
                     ]
                 ]
     }
