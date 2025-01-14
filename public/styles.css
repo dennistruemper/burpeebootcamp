@@ -660,6 +660,9 @@
   .h-1\.5 {
     height: calc(var(--spacing) * 1.5);
   }
+  .h-6 {
+    height: calc(var(--spacing) * 6);
+  }
   .h-8 {
     height: calc(var(--spacing) * 8);
   }
@@ -674,6 +677,9 @@
   }
   .min-h-screen {
     min-height: 100vh;
+  }
+  .w-6 {
+    width: calc(var(--spacing) * 6);
   }
   .w-8 {
     width: calc(var(--spacing) * 8);
@@ -938,6 +944,9 @@
   }
   .bg-black\/30 {
     background-color: color-mix(in oklab, var(--color-black) 30%, transparent);
+  }
+  .bg-gray-800 {
+    background-color: var(--color-gray-800);
   }
   .bg-green-700 {
     background-color: var(--color-green-700);
@@ -1224,6 +1233,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-amber-700);
+      }
+    }
+  }
+  .hover\:bg-gray-900 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-gray-900);
       }
     }
   }
