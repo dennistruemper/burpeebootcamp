@@ -198,7 +198,7 @@ view shared model =
                             []
                         ]
                     , details [ class "mb-4" ]
-                        [ summary [ class "text-sm text-amber-800 opacity-60 cursor-pointer select-none" ]
+                        [ summary [ class "text-lg mt-4 text-amber-800 font-semibold hover:text-amber-900 cursor-pointer select-none border border-amber-800/30 rounded px-3 py-1" ]
                             [ text "Show options" ]
                         , div [ class "flex justify-between gap-4 mt-2" ]
                             [ div [ class "flex gap-4" ]
