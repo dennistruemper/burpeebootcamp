@@ -7,6 +7,7 @@ type alias Model =
     { variants : List Evergreen.V9.Burpee.Burpee
     , selectedVariant : Maybe Evergreen.V9.Burpee.Burpee
     , goalInput : String
+    , first : Bool
     }
 
 

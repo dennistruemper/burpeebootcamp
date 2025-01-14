@@ -17,3 +17,5 @@ type Msg
     | UpdateDaysToShow Int
     | NavigateToMenu
     | TogglePopover (Maybe Time.Posix)
+    | NoOp
+    | CloseSlider

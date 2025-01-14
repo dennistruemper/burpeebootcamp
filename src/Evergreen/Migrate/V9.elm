@@ -257,6 +257,7 @@ migrate_Pages_Counter_Model : Evergreen.V8.Pages.Counter.Model -> Evergreen.V9.P
 migrate_Pages_Counter_Model old =
     { currentReps = old.currentReps
     , overwriteRepGoal = Nothing
+    , initialShowWelcomeModal = False
     }
 
 
@@ -323,6 +324,7 @@ migrate_Pages_PickVariant_Model old =
     { variants = old.variants |> List.map migrate_Burpee_Burpee
     , selectedVariant = Nothing
     , goalInput = ""
+    , first = False
     }
 
 
