@@ -1,12 +1,8 @@
-port module Ports exposing (ToElm(..), decodeMsg, toElm, toJs)
+port module Ports exposing (InitData, ToElm(..), decodeMsg, toElm, toJs)
 
-import Bridge
 import Burpee exposing (Burpee)
 import Json.Decode
-import Json.Decode.Pipeline as Pipeline
 import Json.Encode
-import Serialize as S
-import Time
 import WorkoutResult exposing (WorkoutResult)
 
 
@@ -16,23 +12,14 @@ type ToElm
     | GotInitData InitData
 
 
-type ToJS
-    = StoreBurpeeVariant Burpee
-    | StoreWorkout WorkoutResult
-
-
 type alias InitData =
     { workoutHistory : List WorkoutResult
     , currentBurpeeVariant : Maybe Burpee
+    , version : String
     }
 
 
 port toElm : (String -> msg) -> Sub msg
-
-
-formatSerializeError : String -> S.Error e -> String
-formatSerializeError field error =
-    "Could not decode " ++ field ++ ": "
 
 
 
@@ -46,18 +33,6 @@ decodeMsg json =
             NoOp
 
         Ok "InitData" ->
-            let
-                burpeeDecoder =
-                    Json.Decode.field "tag" Json.Decode.string
-                        |> Json.Decode.andThen
-                            (\tag ->
-                                if tag == "Burpee" then
-                                    Json.Decode.field "data" Burpee.decodeJson
-
-                                else
-                                    Json.Decode.fail "Expected Burpee tag"
-                            )
-            in
             case Json.Decode.decodeString initDataDecoder json of
                 Ok initData ->
                     GotInitData initData
@@ -80,45 +55,24 @@ formatError field error =
 port toJs : { tag : String, data : Json.Encode.Value } -> Cmd msg
 
 
+initDataDecoder : Json.Decode.Decoder InitData
 initDataDecoder =
     let
+        burpeeDecoder : Json.Decode.Decoder (Maybe Burpee)
         burpeeDecoder =
             Json.Decode.field "currentBurpeeVariant" (Json.Decode.maybe Burpee.decodeJson)
 
+        workoutHistoryDecoder : Json.Decode.Decoder (List WorkoutResult)
         workoutHistoryDecoder =
             Json.Decode.field "workoutHistory" (Json.Decode.list WorkoutResult.decodeJson)
+
+        versionDecoder : Json.Decode.Decoder String
+        versionDecoder =
+            Json.Decode.field "version" Json.Decode.string
     in
     Json.Decode.field "data"
-        (Json.Decode.map2 InitData
+        (Json.Decode.map3 InitData
             workoutHistoryDecoder
             burpeeDecoder
+            versionDecoder
         )
-
-
-encodeToJS : ToJS -> Json.Encode.Value
-encodeToJS msg =
-    case msg of
-        StoreBurpeeVariant burpee ->
-            Json.Encode.object
-                [ ( "tag", Json.Encode.string "StoreBurpeeVariant" )
-                , ( "data", Burpee.encodeJson burpee )
-                ]
-
-        StoreWorkout workout ->
-            Json.Encode.object
-                [ ( "tag", Json.Encode.string "StoreWorkout" )
-                , ( "data"
-                  , Json.Encode.object
-                        [ ( "reps", Json.Encode.int workout.reps )
-                        , ( "burpee", Burpee.encodeJson workout.burpee )
-                        , ( "timestamp", Json.Encode.int (Time.posixToMillis workout.timestamp) )
-                        ]
-                  )
-                ]
-
-
-decodeInitData : Json.Decode.Decoder InitData
-decodeInitData =
-    Json.Decode.map2 InitData
-        (Json.Decode.field "workoutHistory" (Json.Decode.list WorkoutResult.decodeJson))
-        (Json.Decode.field "currentBurpeeVariant" (Json.Decode.nullable Burpee.decodeJson))

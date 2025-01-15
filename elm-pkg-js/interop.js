@@ -2,7 +2,7 @@
 port supermario_copy_to_clipboard_to_js : String -> Cmd msg
 */
 
-const version = "v23";
+const version = "v9";
 const TO_JS_PORT = "toJs";
 const TO_ELM_PORT = "toElm";
 const SERVICE_WORKER_PATH = "/serviceWorker.js";
@@ -30,6 +30,7 @@ exports.init = async function (app) {
       data: {
         workoutHistory: safeWorkouts,
         currentBurpeeVariant: currentBurpee,
+        version: version,
       },
     };
 
@@ -39,12 +40,6 @@ exports.init = async function (app) {
     app.ports[TO_ELM_PORT].send(JSON.stringify(message));
   } catch (error) {
     console.error("Error loading initial data:", error);
-    // Send error as stringified message
-    app.ports[TO_ELM_PORT].send(
-      JSON.stringify({
-        tag: "NoOp",
-      })
-    );
   }
 
   app.ports[TO_JS_PORT].subscribe(async function (event) {
@@ -61,6 +56,9 @@ exports.init = async function (app) {
         break;
       case "StoreWorkout":
         await storeWorkout(event.data);
+        break;
+      case "LogError":
+        console.error("BurpeeBootcamp Error:", event.data);
         break;
       default:
         console.log(`fromElm event of tag ${event.tag} not handled`, event);

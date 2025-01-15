@@ -1,4 +1,4 @@
-module Evergreen.V9.Pages.Results exposing (..)
+module Evergreen.V9.Pages.Results exposing (Model, Msg(..))
 
 import Time
 
