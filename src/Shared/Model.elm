@@ -19,4 +19,5 @@ type alias Model =
     , workoutHistory : List WorkoutResult
     , initializing : Bool
     , currentTime : Time.Posix
+    , version : String
     }

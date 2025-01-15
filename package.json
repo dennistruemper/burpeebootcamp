@@ -1,14 +1,19 @@
 {
-  "dependencies": {
-    "@tailwindcss/cli": "^4.0.0-beta.8",
-    "elm-land": "0.20.1",
-    "tailwindcss": "^4.0.0-beta.8"
-  },
   "scripts": {
+    "review": "npx elm-review --compiler=$(which lamdera)",
+    "review:fix": "npx elm-review --compiler=$(which lamdera) --fix",
+    "review:watch": "npx elm-review --compiler=$(which lamdera) --watch",
     "build:css": "tailwindcss -i css/raw.css -o public/styles.css",
     "landing:build:css": "tailwindcss -i css/raw.css -o landingpage/styles.css",
     "watch:css": "tailwindcss -i css/raw.css -o public/styles.css --watch",
     "landing:watch:css": "tailwindcss -i css/raw.css -o landingpage/styles.css --watch",
     "generate:codecs": "npx elm-review --fix --template gampleman/elm-review-derive/preview"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.0.0-beta.9",
+    "elm-land": "0.20.1",
+    "elm-review": "2.12.0",
+    "lamdera": "0.19.1-1.3.2",
+    "tailwindcss": "4.0.0-beta.9"
   }
 }

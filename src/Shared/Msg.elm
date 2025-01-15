@@ -3,7 +3,6 @@ module Shared.Msg exposing (Msg(..))
 {-| -}
 
 import Burpee exposing (Burpee)
-import Ports
 import Time
 import WorkoutResult exposing (WorkoutResult)
 

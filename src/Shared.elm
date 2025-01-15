@@ -12,13 +12,12 @@ module Shared exposing
 
 -}
 
-import Burpee exposing (Burpee)
+import Burpee
 import Effect exposing (Effect)
 import Env
 import Json.Decode
 import Ports
 import Route exposing (Route)
-import Route.Path
 import Shared.Model
 import Shared.Msg
 import Time
@@ -47,8 +46,9 @@ type alias Model =
 
 
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
-init flagsResult route =
+init _ _ =
     let
+        timeEffect : Effect Msg
         timeEffect =
             case Env.mode of
                 Env.Development ->
@@ -57,7 +57,12 @@ init flagsResult route =
                 Env.Production ->
                     Effect.none
     in
-    ( { currentBurpee = Nothing, workoutHistory = [], initializing = True, currentTime = Time.millisToPosix 0 }
+    ( { currentBurpee = Nothing
+      , workoutHistory = []
+      , initializing = True
+      , currentTime = Time.millisToPosix 0
+      , version = "-"
+      }
     , timeEffect
     )
 
@@ -71,12 +76,13 @@ type alias Msg =
 
 
 update : Route () -> Msg -> Model -> ( Model, Effect Msg )
-update route msg model =
+update _ msg model =
     case msg of
         Shared.Msg.StoreWorkoutResult result ->
             case model.currentBurpee of
                 Just burpee ->
                     let
+                        workout : WorkoutResult
                         workout =
                             { reps = result.reps
                             , burpee = burpee
@@ -108,15 +114,16 @@ update route msg model =
                             else
                                 data.workoutHistory
                         , initializing = False
+                        , version = data.version
                       }
-                    , Effect.calculateRepGoal Shared.Msg.GotTimeForRepGoalCalculation
+                    , Effect.batch [ Effect.calculateRepGoal Shared.Msg.GotTimeForRepGoalCalculation ]
                     )
 
                 Ports.NoOp ->
                     ( model, Effect.none )
 
-                Ports.UnknownMessage _ ->
-                    ( model, Effect.none )
+                Ports.UnknownMessage message ->
+                    ( model, Effect.logError message )
 
         Shared.Msg.GotTimeForRepGoalCalculation time ->
             ( { model | currentTime = time }, Effect.none )
@@ -124,28 +131,30 @@ update route msg model =
         Shared.Msg.BurpeePicked burpee ->
             ( { model | currentBurpee = Just burpee }, Effect.none )
 
-        Shared.Msg.NoOp ->
-            ( model, Effect.none )
-
         Shared.Msg.GotTime time ->
             ( { model | currentTime = time }, Effect.none )
 
         Shared.Msg.GotTimeForFakedata time ->
             ( { model | workoutHistory = generateFakeData time, currentTime = time }, Effect.none )
 
+        Shared.Msg.NoOp ->
+            ( model, Effect.none )
+
 
 generateFakeData : Time.Posix -> List WorkoutResult
 generateFakeData time =
     let
+        msPerDay : Int
         msPerDay =
             86400000
 
+        now : Int
         now =
             Time.posixToMillis time
     in
     [ { reps = 12
       , burpee = Burpee.default
-      , timestamp = now - (msPerDay * 1) |> Time.millisToPosix -- Yesterday
+      , timestamp = now - msPerDay |> Time.millisToPosix -- Yesterday
       , repGoal = Just 20
       }
     , { reps = 13
@@ -244,5 +253,5 @@ generateFakeData time =
 
 
 subscriptions : Route () -> Model -> Sub Msg
-subscriptions route model =
+subscriptions _ _ =
     Sub.batch [ Ports.toElm Shared.Msg.GotPortMessage, Time.every 60000 Shared.Msg.GotTime ]

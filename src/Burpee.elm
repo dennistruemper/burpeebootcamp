@@ -4,23 +4,16 @@ module Burpee exposing
     , GroundPart(..)
     , TopPart(..)
     , calculateDifficulty
-    , codec
-    , decode
     , decodeJson
     , default
-    , encode
     , encodeJson
     , getDisplayName
-    , getGroundAngle
-    , getGroundPart
-    , getTopPart
     , toDescriptionString
     , variations
     )
 
 import Json.Decode
 import Json.Encode
-import Serialize as S
 
 
 type GroundAngle
@@ -163,27 +156,6 @@ getDisplayName burpee =
             data.name
 
 
-getGroundAngle : Burpee -> GroundAngle
-getGroundAngle burpee =
-    case burpee of
-        Burpee data ->
-            data.angle
-
-
-getGroundPart : Burpee -> GroundPart
-getGroundPart burpee =
-    case burpee of
-        Burpee data ->
-            data.groundPart
-
-
-getTopPart : Burpee -> TopPart
-getTopPart burpee =
-    case burpee of
-        Burpee data ->
-            data.topPart
-
-
 angleToString : GroundAngle -> String
 angleToString angle =
     case angle of
@@ -264,11 +236,6 @@ toDescriptionString burpee =
 
 
 -- CODECS
-
-
-decode : Json.Encode.Value -> Result (S.Error e) Burpee
-decode value =
-    S.decodeFromJson codec value
 
 
 decodeJson : Json.Decode.Decoder Burpee
@@ -460,123 +427,3 @@ decodeTopPart =
                     _ ->
                         Json.Decode.fail "Invalid top part"
             )
-
-
-encode : Burpee -> Json.Encode.Value
-encode burpee =
-    S.encodeToJson codec burpee
-
-
-codec : S.Codec e Burpee
-codec =
-    S.customType
-        (\burpeeEncoder value ->
-            case value of
-                Burpee arg0 ->
-                    burpeeEncoder arg0
-        )
-        |> S.variant1
-            Burpee
-            (S.record
-                (\name angle groundPart topPart ->
-                    { name = name, angle = angle, groundPart = groundPart, topPart = topPart }
-                )
-                |> S.field .name S.string
-                |> S.field .angle groundAngleCodec
-                |> S.field .groundPart groundPartCodec
-                |> S.field .topPart topPartCodec
-                |> S.finishRecord
-            )
-        |> S.finishCustomType
-
-
-groundAngleCodec : S.Codec e GroundAngle
-groundAngleCodec =
-    S.customType
-        (\hipInclinedEncoder kneeInclinedEncoder littleInclinedEncoder flatEncoder littleDeclineEncoder kneeDeclineEncoder value ->
-            case value of
-                HipInclined ->
-                    hipInclinedEncoder
-
-                KneeInclined ->
-                    kneeInclinedEncoder
-
-                LittleInclined ->
-                    littleInclinedEncoder
-
-                Flat ->
-                    flatEncoder
-
-                LittleDecline ->
-                    littleDeclineEncoder
-
-                KneeDecline ->
-                    kneeDeclineEncoder
-        )
-        |> S.variant0 HipInclined
-        |> S.variant0 KneeInclined
-        |> S.variant0 LittleInclined
-        |> S.variant0 Flat
-        |> S.variant0 LittleDecline
-        |> S.variant0 KneeDecline
-        |> S.finishCustomType
-
-
-groundPartCodec : S.Codec e GroundPart
-groundPartCodec =
-    S.customType
-        (\plankEncoder mountainClimbersEncoder pushupsEncoder navySealsEncoder value ->
-            case value of
-                Plank ->
-                    plankEncoder
-
-                MountainClimbers arg0 ->
-                    mountainClimbersEncoder arg0
-
-                Pushups arg0 ->
-                    pushupsEncoder arg0
-
-                NavySeals arg0 ->
-                    navySealsEncoder arg0
-        )
-        |> S.variant0 Plank
-        |> S.variant1 MountainClimbers S.int
-        |> S.variant1 Pushups S.int
-        |> S.variant1 NavySeals S.int
-        |> S.finishCustomType
-
-
-topPartCodec : S.Codec e TopPart
-topPartCodec =
-    S.customType
-        (\jumpEncoder tuckJumpEncoder kneeRaiseEncoder jumpingJackEncoder boxJumpEncoder pullUpEncoder noOpEncoder value ->
-            case value of
-                Jump ->
-                    jumpEncoder
-
-                TuckJump ->
-                    tuckJumpEncoder
-
-                KneeRaise ->
-                    kneeRaiseEncoder
-
-                JumpingJack ->
-                    jumpingJackEncoder
-
-                BoxJump ->
-                    boxJumpEncoder
-
-                PullUp ->
-                    pullUpEncoder
-
-                NoOp ->
-                    noOpEncoder
-        )
-        |> S.variant0 Jump
-        |> S.variant0 TuckJump
-        |> S.variant0 KneeRaise
-        |> S.variant0 JumpingJack
-        |> S.variant0 BoxJump
-        |> S.variant0 PullUp
-        |> S.variant0 NoOp
-        |> S.finishCustomType
