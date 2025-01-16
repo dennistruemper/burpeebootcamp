@@ -1,12 +1,11 @@
 module Effect exposing
     ( Effect
     , none, batch
-    , sendCmd, sendMsg
+    , sendCmd
     , pushRoute, replaceRoute
     , pushRoutePath, replaceRoutePath
-    , loadExternalUrl, back
     , map, toCmd
-    , calculateRepGoal, getTime, newCurrentBurpee, storeBurpeeVariant, storeWorkout, storeWorkoutResult
+    , calculateRepGoal, getTime, logError, newCurrentBurpee, storeBurpeeVariant, storeWorkout, storeWorkoutResult
     )
 
 {-|
@@ -14,11 +13,10 @@ module Effect exposing
 @docs Effect
 
 @docs none, batch
-@docs sendCmd, sendMsg
+@docs sendCmd
 
 @docs pushRoute, replaceRoute
 @docs pushRoutePath, replaceRoutePath
-@docs loadExternalUrl, back
 
 @docs map, toCmd
 
@@ -29,7 +27,7 @@ import Burpee exposing (Burpee)
 import Dict exposing (Dict)
 import Json.Encode
 import Ports
-import Route exposing (Route)
+import Route
 import Route.Path
 import Shared.Model
 import Shared.Msg
@@ -47,8 +45,6 @@ type Effect msg
       -- ROUTING
     | PushUrl String
     | ReplaceUrl String
-    | LoadExternalUrl String
-    | Back
       -- SHARED
     | SendSharedMsg Shared.Msg.Msg
     | SendMessageToJavaScript
@@ -80,15 +76,6 @@ batch =
 sendCmd : Cmd msg -> Effect msg
 sendCmd =
     SendCmd
-
-
-{-| Send a message as an effect. Useful when emitting events from UI components.
--}
-sendMsg : msg -> Effect msg
-sendMsg msg =
-    Task.succeed msg
-        |> Task.perform identity
-        |> SendCmd
 
 
 
@@ -125,6 +112,14 @@ storeWorkout workout =
     SendMessageToJavaScript
         { tag = "StoreWorkout"
         , data = WorkoutResult.encodeJson workout
+        }
+
+
+logError : String -> Effect msg
+logError message =
+    SendMessageToJavaScript
+        { tag = "LogError"
+        , data = Json.Encode.string message
         }
 
 
@@ -171,25 +166,11 @@ replaceRoutePath path =
     ReplaceUrl (Route.Path.toString path)
 
 
-{-| Redirect users to a new URL, somewhere external to your web application.
--}
-loadExternalUrl : String -> Effect msg
-loadExternalUrl =
-    LoadExternalUrl
-
-
 {-| Calculate the next rep goal based on workout history.
 -}
 calculateRepGoal : (Time.Posix -> msg) -> Effect msg
 calculateRepGoal gotTimeMsg =
     SendCmd (Time.now |> Task.perform gotTimeMsg)
-
-
-{-| Navigate back one page
--}
-back : Effect msg
-back =
-    Back
 
 
 
@@ -216,12 +197,6 @@ map fn effect =
 
         ReplaceUrl url ->
             ReplaceUrl url
-
-        Back ->
-            Back
-
-        LoadExternalUrl url ->
-            LoadExternalUrl url
 
         SendSharedMsg sharedMsg ->
             SendSharedMsg sharedMsg
@@ -258,12 +233,6 @@ toCmd options effect =
 
         ReplaceUrl url ->
             Browser.Navigation.replaceUrl options.key url
-
-        Back ->
-            Browser.Navigation.back options.key 1
-
-        LoadExternalUrl url ->
-            Browser.Navigation.load url
 
         SendSharedMsg sharedMsg ->
             Task.succeed sharedMsg

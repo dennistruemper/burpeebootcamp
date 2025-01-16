@@ -1,13 +1,10 @@
 module Types exposing (..)
 
 import Bridge
-import Browser exposing (UrlRequest)
-import Browser.Navigation exposing (Key)
 import Burpee exposing (Burpee)
 import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
 import Main as ElmLand
-import Url exposing (Url)
 
 
 type alias FrontendModel =
@@ -32,7 +29,7 @@ type BackendMsg
 
 
 type ToFrontend
-    = LoggedIn UserData
+    = NoOp
 
 
 type alias UserData =

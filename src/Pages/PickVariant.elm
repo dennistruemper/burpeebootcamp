@@ -3,14 +3,13 @@ module Pages.PickVariant exposing (Model, Msg(..), page)
 import Burpee
 import Dict
 import Effect exposing (Effect)
-import Html exposing (Html, button, div, h1, h2, input, p, text)
+import Html exposing (button, div, h1, h2, input, p, text)
 import Html.Attributes exposing (class, disabled, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Page exposing (Page)
 import Route exposing (Route)
 import Route.Path
 import Shared
-import Shared.Msg
 import View exposing (View)
 
 
@@ -20,7 +19,7 @@ page shared route =
         { init = init route
         , update = update
         , subscriptions = subscriptions
-        , view = view
+        , view = view shared
         }
 
 
@@ -107,7 +106,7 @@ update msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -115,8 +114,8 @@ subscriptions model =
 -- VIEW
 
 
-view : Model -> View Msg
-view model =
+view : Shared.Model -> Model -> View Msg
+view shared model =
     { title = "Adjust Training Plan"
     , body =
         [ div [ class "p-4" ]
@@ -135,7 +134,7 @@ view model =
                                 ]
                             ]
                         , h2 [ class "text-xl mb-2" ] [ text "Choose Burpee Variant" ]
-                        , viewVariantList model.variants model.selectedVariant
+                        , viewVariantList model.variants shared.currentBurpee
                         ]
 
                 Just selectedBurpee ->
@@ -185,8 +184,9 @@ view model =
 
 
 viewVariantList : List Burpee.Burpee -> Maybe Burpee.Burpee -> Html.Html Msg
-viewVariantList variants selectedVariant =
+viewVariantList variants currentBurpee =
     let
+        sortedVariants : List Burpee.Burpee
         sortedVariants =
             variants
                 |> List.sortBy Burpee.calculateDifficulty
@@ -200,17 +200,19 @@ viewVariantList variants selectedVariant =
         ( hardVariants, veryHardVariants ) =
             List.partition (\b -> Burpee.calculateDifficulty b <= 130) hardAndVeryHard
 
+        sectionHeader : String -> Html.Html Msg
         sectionHeader text =
             Html.h2
                 [ class "col-span-1 md:col-span-2 text-xl font-semibold text-amber-800 mt-6 first:mt-0" ]
                 [ Html.text text ]
 
+        variantSection : String -> List Burpee.Burpee -> List (Html.Html Msg)
         variantSection headerText variants_ =
             if List.isEmpty variants_ then
                 []
 
             else
-                sectionHeader headerText :: List.map viewVariant variants_
+                sectionHeader headerText :: List.map (viewVariant currentBurpee) variants_
     in
     Html.div
         [ class "max-w-3xl mx-auto grid gap-4 grid-cols-1 md:grid-cols-2" ]
@@ -223,15 +225,22 @@ viewVariantList variants selectedVariant =
         )
 
 
-viewVariant : Burpee.Burpee -> Html.Html Msg
-viewVariant burpee =
+viewVariant : Maybe Burpee.Burpee -> Burpee.Burpee -> Html.Html Msg
+viewVariant selectedVariant burpee =
     Html.button
         [ Html.Events.onClick (PickedVariant burpee)
         , class """
-            w-full p-4 bg-white rounded-lg shadow-md hover:shadow-lg
-            transition-shadow duration-200 border border-gray-200
+            w-full p-4 rounded-lg shadow-md hover:shadow-lg
+            transition-shadow duration-200 border-2
             text-left
+            relative
           """
+        , class <|
+            if selectedVariant == Just burpee then
+                "bg-amber-50 border-amber-600"
+
+            else
+                "bg-white border-gray-200"
         ]
         [ Html.div []
             [ Html.h3
@@ -241,4 +250,11 @@ viewVariant burpee =
                 [ class "text-gray-600 mb-2" ]
                 [ Html.text (Burpee.toDescriptionString burpee) ]
             ]
+        , if selectedVariant == Just burpee then
+            Html.div
+                [ class "absolute top-2 right-2" ]
+                [ Html.text "✓" ]
+
+          else
+            Html.text ""
         ]

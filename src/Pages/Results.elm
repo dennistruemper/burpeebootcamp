@@ -1,12 +1,10 @@
 module Pages.Results exposing (Model, Msg(..), page)
 
-import Burpee exposing (Burpee)
 import Dict
 import Effect exposing (Effect)
-import Html exposing (Html, button, div, h1, h2, h3, input, span, text, time)
-import Html.Attributes exposing (class, datetime, max, min, style, title, type_, value)
+import Html exposing (Html, button, div, h1, h2, h3, input, span, text)
+import Html.Attributes exposing (class, style, type_, value)
 import Html.Events exposing (onClick, onInput)
-import Json.Decode as Decode
 import Page exposing (Page)
 import Route exposing (Route)
 import Route.Path
@@ -17,7 +15,7 @@ import WorkoutResult exposing (WorkoutResult)
 
 
 page : Shared.Model -> Route () -> Page Model Msg
-page shared route =
+page shared _ =
     Page.new
         { init = init
         , update = update
@@ -55,7 +53,6 @@ init () =
 
 type Msg
     = GotCurrentTime Time.Posix
-    | SelectDate (Maybe Time.Posix)
     | UpdateDaysToShow Int
     | NavigateToMenu
     | TogglePopover (Maybe Time.Posix)
@@ -68,11 +65,6 @@ update msg model =
     case msg of
         GotCurrentTime time ->
             ( { model | currentTime = time }
-            , Effect.none
-            )
-
-        SelectDate maybeDate ->
-            ( { model | selectedDate = maybeDate }
             , Effect.none
             )
 
@@ -121,24 +113,23 @@ view : Shared.Model -> Model -> View Msg
 view shared model =
     { title = "Practice History - BurpeeBootcamp"
     , body =
-        case shared.initializing of
-            True ->
-                [ text "Loading..." ]
+        if shared.initializing then
+            [ text "Loading..." ]
 
-            False ->
-                [ div [ class "results-container p-4" ]
-                    [ div [ class "flex justify-between items-center mb-6" ]
-                        [ h1 [ class "results-title text-2xl font-bold" ]
-                            [ text "Your Practice Sessions" ]
-                        , button
-                            [ class "px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-lg transform transition hover:scale-105"
-                            , onClick NavigateToMenu
-                            ]
-                            [ text "Menu" ]
+        else
+            [ div [ class "results-container p-4" ]
+                [ div [ class "flex justify-between items-center mb-6" ]
+                    [ h1 [ class "results-title text-2xl font-bold" ]
+                        [ text "Your Practice Sessions" ]
+                    , button
+                        [ class "px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-lg transform transition hover:scale-105"
+                        , onClick NavigateToMenu
                         ]
-                    , viewCalendar shared.workoutHistory model
+                        [ text "Menu" ]
                     ]
+                , viewCalendar shared.workoutHistory model
                 ]
+            ]
     }
 
 
@@ -157,12 +148,15 @@ viewCalendar workouts model =
                 insertDate : Time.Posix -> Dict.Dict String (List { time : Time.Posix, isDummy : Bool }) -> Dict.Dict String (List { time : Time.Posix, isDummy : Bool })
                 insertDate date dict =
                     let
+                        month : Time.Month
                         month =
                             Time.toMonth Time.utc date
 
+                        year : Int
                         year =
                             Time.toYear Time.utc date
 
+                        key : String
                         key =
                             monthKey year month
                     in
@@ -186,9 +180,11 @@ viewCalendar workouts model =
 
                         Just lastDate ->
                             let
+                                weekday : Time.Weekday
                                 weekday =
                                     Time.toWeekday Time.utc lastDate.time
 
+                                paddingCount : Int
                                 paddingCount =
                                     case weekday of
                                         Time.Mon ->
@@ -213,33 +209,24 @@ viewCalendar workouts model =
                                             0
 
                                 -- Create dummy dates for padding
+                                oneMonthInMillis : Int
                                 oneMonthInMillis =
                                     1000 * 60 * 60 * 24 * 30
 
+                                paddingDates : List { time : Time.Posix, isDummy : Bool }
                                 paddingDates =
                                     List.range 1 paddingCount
                                         |> List.map (\_ -> { time = Time.millisToPosix (Time.posixToMillis lastDate.time + oneMonthInMillis), isDummy = True })
-
-                                result =
-                                    paddingDates ++ dates_
                             in
-                            result
+                            paddingDates ++ dates_
 
                 -- Helper to get a sortable value for a month/year combination
-                getMonthSortValue : List Time.Posix -> Int
-                getMonthSortValue dates_ =
-                    case List.head dates_ of
-                        Just date ->
-                            (Time.toYear Time.utc date * 12) + monthToInt (Time.toMonth Time.utc date)
-
-                        Nothing ->
-                            0
             in
             dates
                 |> List.foldl insertDate Dict.empty
                 |> Dict.toList
                 |> List.map
-                    (\( key, dates_ ) ->
+                    (\( _, dates_ ) ->
                         case List.head dates_ of
                             Just date ->
                                 ( Time.toMonth Time.utc date.time
@@ -282,21 +269,27 @@ viewCalendar workouts model =
             List.filter
                 (\workout ->
                     let
+                        workoutDay : Int
                         workoutDay =
                             Time.toDay Time.utc workout.timestamp
 
+                        workoutMonth : Time.Month
                         workoutMonth =
                             Time.toMonth Time.utc workout.timestamp
 
+                        workoutYear : Int
                         workoutYear =
                             Time.toYear Time.utc workout.timestamp
 
+                        targetDay : Int
                         targetDay =
                             Time.toDay Time.utc date
 
+                        targetMonth : Time.Month
                         targetMonth =
                             Time.toMonth Time.utc date
 
+                        targetYear : Int
                         targetYear =
                             Time.toYear Time.utc date
                     in
@@ -308,7 +301,7 @@ viewCalendar workouts model =
                             [] ->
                                 Nothing
 
-                            firstWorkout :: restWorkouts ->
+                            firstWorkout :: _ ->
                                 Just
                                     { totalReps = List.foldl (\w sum -> sum + w.reps) 0 workoutsForDay
                                     , sessionCount = List.length workoutsForDay
@@ -343,6 +336,7 @@ viewCalendar workouts model =
 
             else
                 let
+                    percentage : Float
                     percentage =
                         toFloat (totalReps - minReps) / toFloat (maxReps - minReps)
                 in
@@ -367,6 +361,7 @@ viewCalendar workouts model =
             case List.minimum (List.map (.timestamp >> Time.posixToMillis) workouts) of
                 Just oldestTimestamp ->
                     let
+                        daysDiff : Int
                         daysDiff =
                             (Time.posixToMillis model.currentTime - oldestTimestamp)
                                 // (24 * 60 * 60 * 1000)
@@ -379,14 +374,8 @@ viewCalendar workouts model =
         -- Only show slider if we have more than 40 days of history
         showSlider : Bool
         showSlider =
-            let
-                _ =
-                    Debug.log "maxDaysToShow" maxDaysToShow
-            in
-            Debug.log "maxDaysToShow"
-                (maxDaysToShow
-                    /= 40
-                )
+            maxDaysToShow
+                /= 40
 
         viewDay : Time.Posix -> Bool -> Html Msg
         viewDay date isDummy =
@@ -400,9 +389,11 @@ viewCalendar workouts model =
             else
                 -- Existing day rendering code
                 let
+                    workout : Maybe DayStats
                     workout =
                         getWorkout date
 
+                    isToday : Bool
                     isToday =
                         Time.toDay Time.utc date
                             == Time.toDay Time.utc model.currentTime
@@ -411,6 +402,7 @@ viewCalendar workouts model =
                             && Time.toYear Time.utc date
                             == Time.toYear Time.utc model.currentTime
 
+                    baseClass : String
                     baseClass =
                         if isToday then
                             "aspect-square ring-2 ring-amber-500"
@@ -673,197 +665,8 @@ monthToInt month =
             12
 
 
-getDaysInMonth : Int -> Time.Month -> List Time.Posix
-getDaysInMonth year month =
-    let
-        -- First day of the target month
-        firstOfMonth =
-            Time.millisToPosix 1735763869059
-
-        -- Get the weekday of the first day (0 = Sun, 1 = Mon, ..., 6 = Sat)
-        firstDayWeekday =
-            Time.toWeekday Time.utc firstOfMonth
-                |> weekdayToInt
-                |> modBy 7
-
-        -- Calculate padding days needed at start (for Monday-based week)
-        paddingBefore =
-            (firstDayWeekday + 6)
-                |> modBy 7
-
-        -- Days in the month
-        daysInMonth =
-            daysInMonthHelper year month
-
-        -- Calculate padding days needed at end
-        paddingAfter =
-            (7 - ((paddingBefore + daysInMonth) |> modBy 7))
-                |> modBy 7
-    in
-    List.range 1 31
-        |> List.map
-            (\n -> Time.posixToMillis firstOfMonth + ((n - 1) * 24 * 60 * 60 * 1000) |> Time.millisToPosix)
-
-
 
 -- Additional helper functions
-
-
-daysInMonthHelper : Int -> Time.Month -> Int
-daysInMonthHelper year month =
-    case month of
-        Time.Jan ->
-            31
-
-        Time.Feb ->
-            if isLeapYear year then
-                29
-
-            else
-                28
-
-        Time.Mar ->
-            31
-
-        Time.Apr ->
-            30
-
-        Time.May ->
-            31
-
-        Time.Jun ->
-            30
-
-        Time.Jul ->
-            31
-
-        Time.Aug ->
-            31
-
-        Time.Sep ->
-            30
-
-        Time.Oct ->
-            31
-
-        Time.Nov ->
-            30
-
-        Time.Dec ->
-            31
-
-
-isLeapYear : Int -> Bool
-isLeapYear year =
-    (modBy 4 year == 0) && ((modBy 100 year /= 0) || (modBy 400 year == 0))
-
-
-weekdayToInt : Time.Weekday -> Int
-weekdayToInt weekday =
-    case weekday of
-        Time.Mon ->
-            1
-
-        Time.Tue ->
-            2
-
-        Time.Wed ->
-            3
-
-        Time.Thu ->
-            4
-
-        Time.Fri ->
-            5
-
-        Time.Sat ->
-            6
-
-        Time.Sun ->
-            0
-
-
-previousMonth : Time.Month -> Time.Month
-previousMonth month =
-    case month of
-        Time.Jan ->
-            Time.Dec
-
-        Time.Feb ->
-            Time.Jan
-
-        Time.Mar ->
-            Time.Feb
-
-        Time.Apr ->
-            Time.Mar
-
-        Time.May ->
-            Time.Apr
-
-        Time.Jun ->
-            Time.May
-
-        Time.Jul ->
-            Time.Jun
-
-        Time.Aug ->
-            Time.Jul
-
-        Time.Sep ->
-            Time.Aug
-
-        Time.Oct ->
-            Time.Sep
-
-        Time.Nov ->
-            Time.Oct
-
-        Time.Dec ->
-            Time.Nov
-
-
-nextMonth : Time.Month -> Time.Month
-nextMonth month =
-    case month of
-        Time.Jan ->
-            Time.Feb
-
-        Time.Feb ->
-            Time.Mar
-
-        Time.Mar ->
-            Time.Apr
-
-        Time.Apr ->
-            Time.May
-
-        Time.May ->
-            Time.Jun
-
-        Time.Jun ->
-            Time.Jul
-
-        Time.Jul ->
-            Time.Aug
-
-        Time.Aug ->
-            Time.Sep
-
-        Time.Sep ->
-            Time.Oct
-
-        Time.Oct ->
-            Time.Nov
-
-        Time.Nov ->
-            Time.Dec
-
-        Time.Dec ->
-            Time.Jan
-
-
-
 -- Add this new type to store the aggregated workout data
 
 
@@ -875,18 +678,15 @@ type alias DayStats =
     }
 
 
-stopPropagation : msg -> Html.Attribute msg
-stopPropagation msg =
-    Html.Events.stopPropagationOn "click" (Decode.succeed ( msg, True ))
-
-
 formatTime : Time.Posix -> String
 formatTime time =
     let
+        hour : String
         hour =
             String.fromInt (Time.toHour Time.utc time)
                 |> String.padLeft 2 '0'
 
+        minute : String
         minute =
             String.fromInt (Time.toMinute Time.utc time)
                 |> String.padLeft 2 '0'
