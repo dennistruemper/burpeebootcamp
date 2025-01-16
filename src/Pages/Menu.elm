@@ -2,8 +2,8 @@ module Pages.Menu exposing (Model, Msg(..), page)
 
 import Dict
 import Effect exposing (Effect)
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Html, button, div, h1, text)
+import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Page exposing (Page)
 import Route exposing (Route)
@@ -13,12 +13,12 @@ import View exposing (View)
 
 
 page : Shared.Model -> Route () -> Page Model Msg
-page shared route =
+page shared _ =
     Page.new
         { init = init
         , update = update
         , subscriptions = subscriptions
-        , view = view
+        , view = view shared
         }
 
 
@@ -63,7 +63,7 @@ update msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
@@ -71,8 +71,8 @@ subscriptions model =
 -- VIEW
 
 
-view : Model -> View Msg
-view model =
+view : Shared.Model -> Model -> View Msg
+view shared _ =
     { title = "Menu - BurpeeBootcamp"
     , body =
         [ div [ class "flex flex-col items-center w-full min-h-screen bg-gradient-to-b from-amber-50 to-amber-100" ]
@@ -83,6 +83,8 @@ view model =
                 , menuButton "Plan Next Practice" Route.Path.PickVariant
                 , menuButton "Practice History" Route.Path.Results
                 ]
+            , div [ class "mt-auto mb-4 text-amber-600 text-sm" ]
+                [ text shared.version ]
             ]
         ]
     }

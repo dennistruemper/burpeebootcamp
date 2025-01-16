@@ -2,6 +2,7 @@
 /.env
 /.elm-land/server/.vite
 /elm-stuff
+/review/elm-stuff
 /node_modules
 .DS_Store
 *.pem
