@@ -97,6 +97,7 @@ type alias Model =
     { currentReps : Int
     , overwriteRepGoal : Maybe Int
     , initialShowWelcomeModal : Bool
+    , groundTouchesForCurrentRep : Int
     }
 
 
@@ -105,6 +106,7 @@ init shared route _ =
     ( { currentReps = 0
       , overwriteRepGoal = Dict.get "repGoal" route.query |> Maybe.map String.toInt |> Maybe.withDefault Nothing
       , initialShowWelcomeModal = List.isEmpty shared.workoutHistory
+      , groundTouchesForCurrentRep = 0
       }
     , Effect.none
     )
@@ -127,12 +129,41 @@ update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
 update shared msg model =
     case msg of
         IncrementReps ->
-            ( { model | currentReps = model.currentReps + 1 }
+            let
+                requiredTouches : Int
+                requiredTouches =
+                    shared.currentBurpee
+                        |> Maybe.withDefault Burpee.default
+                        |> Burpee.groundTouchesRequired
+
+                newGroundTouches =
+                    model.groundTouchesForCurrentRep + 1
+
+                shouldIncrementRep =
+                    newGroundTouches >= requiredTouches
+            in
+            ( { model
+                | currentReps =
+                    if shouldIncrementRep then
+                        model.currentReps + 1
+
+                    else
+                        model.currentReps
+                , groundTouchesForCurrentRep =
+                    if shouldIncrementRep then
+                        0
+
+                    else
+                        newGroundTouches
+              }
             , Effect.none
             )
 
         ResetCounter ->
-            ( { model | currentReps = 0 }
+            ( { model
+                | currentReps = 0
+                , groundTouchesForCurrentRep = 0
+              }
             , Effect.none
             )
 
@@ -245,6 +276,18 @@ view shared model =
                             [ text (String.fromInt model.currentReps) ]
                         , div [ class "text-2xl opacity-80 text-amber-800" ]
                             [ text <| " / " ++ String.fromInt (calculateNextGoal shared model) ++ " reps" ]
+                        , let
+                            requiredTouches =
+                                shared.currentBurpee
+                                    |> Maybe.withDefault Burpee.default
+                                    |> Burpee.groundTouchesRequired
+                          in
+                          if requiredTouches > 1 then
+                            div [ class "text-lg text-amber-800 mt-2" ]
+                                [ text <| "Ground touches: " ++ String.fromInt model.groundTouchesForCurrentRep ++ "/" ++ String.fromInt requiredTouches ]
+
+                          else
+                            text ""
                         , div [ class "text-sm text-amber-800/70 mt-2 italic text-center" ]
                             [ text "Take active rest by slow running in place"
                             , br [] []

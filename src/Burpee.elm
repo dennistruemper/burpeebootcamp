@@ -8,6 +8,7 @@ module Burpee exposing
     , default
     , encodeJson
     , getDisplayName
+    , groundTouchesRequired
     , toDescriptionString
     , variations
     )
@@ -232,6 +233,24 @@ toDescriptionString burpee =
     case burpee of
         Burpee data ->
             angleToString data.angle ++ " " ++ groundPartToString data.groundPart ++ " " ++ topPartToString data.topPart
+
+
+groundTouchesRequired : Burpee -> Int
+groundTouchesRequired burpee =
+    case burpee of
+        Burpee data ->
+            case data.groundPart of
+                Plank ->
+                    1
+
+                MountainClimbers _ ->
+                    1
+
+                Pushups n ->
+                    n
+
+                NavySeals n ->
+                    n
 
 
 
