@@ -16,13 +16,7 @@ exports.init = async function (app) {
     ]);
 
     // Ensure workouts is an array and currentBurpee is properly formatted
-    const safeWorkouts = Array.isArray(workouts)
-      ? workouts.map((workout) => ({
-          reps: workout.reps,
-          burpee: workout.burpee,
-          timestamp: workout.timestamp,
-        }))
-      : [];
+    const safeWorkouts = Array.isArray(workouts) ? workouts : [];
 
     // Create the message object
     const message = {
@@ -71,7 +65,7 @@ exports.init = async function (app) {
 // Initialize IndexedDB
 function initDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("BurpeeBootcamp", 1);
+    const request = indexedDB.open("BurpeeBootcamp", 2);
 
     request.onerror = () => reject(request.error);
 
@@ -100,16 +94,13 @@ function initDB() {
 
 // Store a workout
 async function storeWorkout(workout) {
+  console.log("Storing workout:", workout);
   const db = await initDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(["workouts"], "readwrite");
     const store = transaction.objectStore("workouts");
 
-    const request = store.put({
-      reps: workout.reps,
-      burpee: workout.burpee,
-      timestamp: workout.timestamp,
-    });
+    const request = store.put(workout);
 
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);

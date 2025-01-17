@@ -557,11 +557,28 @@ viewPopover dayStats =
                     , div [ class "space-y-3" ]
                         (List.map
                             (\session ->
-                                div [ class "flex items-center justify-between p-3 bg-amber-50 rounded-lg" ]
-                                    [ div [ class "text-amber-800" ]
-                                        [ text (formatTime session.timestamp) ]
-                                    , div [ class "font-medium text-amber-900" ]
-                                        [ text (String.fromInt session.reps ++ " reps") ]
+                                div [ class "flex flex-col p-3 bg-amber-50 rounded-lg" ]
+                                    [ div [ class "flex items-center justify-between" ]
+                                        [ div [ class "text-amber-800" ]
+                                            [ text (formatTime session.timestamp) ]
+                                        , case session.repGoal of
+                                            Just goal ->
+                                                let
+                                                    percentage =
+                                                        (toFloat session.reps / toFloat goal * 100)
+                                                            |> round
+                                                            |> String.fromInt
+                                                in
+                                                div [ class "text-right" ]
+                                                    [ div [ class "font-medium text-amber-900" ]
+                                                        [ text (String.fromInt session.reps ++ " of " ++ String.fromInt goal ++ " reps") ]
+                                                    , div [ class "text-sm text-amber-700" ]
+                                                        [ text (percentage ++ "% completed") ]
+                                                    ]
+
+                                            Nothing ->
+                                                text (String.fromInt session.reps ++ " reps")
+                                        ]
                                     ]
                             )
                             dayStats.sessions
