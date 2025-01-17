@@ -564,6 +564,7 @@ viewPopover dayStats =
                                         , case session.repGoal of
                                             Just goal ->
                                                 let
+                                                    percentage : String
                                                     percentage =
                                                         (toFloat session.reps / toFloat goal * 100)
                                                             |> round

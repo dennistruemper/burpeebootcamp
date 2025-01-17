@@ -7,7 +7,12 @@
     "landing:build:css": "tailwindcss -i css/raw.css -o landingpage/styles.css",
     "watch:css": "tailwindcss -i css/raw.css -o public/styles.css --watch",
     "landing:watch:css": "tailwindcss -i css/raw.css -o landingpage/styles.css --watch",
-    "generate:codecs": "npx elm-review --fix --template gampleman/elm-review-derive/preview"
+    "generate:codecs": "npx elm-review --fix --template gampleman/elm-review-derive/preview",
+    "review": "npx elm-review --compiler=$(which lamdera)",
+    "review:fix": "npx elm-review --compiler=$(which lamdera) --fix",
+    "review:watch": "npx elm-review --compiler=$(which lamdera) --watch",
+    "publish-check": "lamdera check && npm run review && node scripts/update-cache-version.js && git add public/serviceWorker.js elm-pkg-js/interop.js",
+    "publish": "lamdera deploy"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.0.0-beta.9",
