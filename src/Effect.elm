@@ -5,7 +5,7 @@ module Effect exposing
     , pushRoute, replaceRoute
     , pushRoutePath, replaceRoutePath
     , map, toCmd
-    , calculateRepGoal, getTime, logError, newCurrentBurpee, storeBurpeeVariant, storeWorkout, storeWorkoutResult
+    , calculateRepGoal, getRandom, getTime, logError, newCurrentBurpee, storeBurpeeVariant, storeWorkout, storeWorkoutResult
     )
 
 {-|
@@ -27,6 +27,7 @@ import Burpee exposing (Burpee)
 import Dict exposing (Dict)
 import Json.Encode
 import Ports
+import Random
 import Route
 import Route.Path
 import Shared.Model
@@ -171,6 +172,11 @@ replaceRoutePath path =
 calculateRepGoal : (Time.Posix -> msg) -> Effect msg
 calculateRepGoal gotTimeMsg =
     SendCmd (Time.now |> Task.perform gotTimeMsg)
+
+
+getRandom : Random.Generator a -> (a -> msg) -> Effect msg
+getRandom generator toMsg =
+    SendCmd (Random.generate toMsg generator)
 
 
 
