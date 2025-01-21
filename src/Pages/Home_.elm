@@ -60,10 +60,10 @@ update shared msg model =
               else
                 case shared.currentBurpee of
                     Just _ ->
-                        Effect.pushRoutePath Route.Path.Counter
+                        Effect.replaceRoutePath Route.Path.Counter
 
                     Nothing ->
-                        Effect.pushRoute { path = Route.Path.PickVariant, query = Dict.fromList [ ( "first", "true" ) ], hash = Nothing }
+                        Effect.replaceRoute { path = Route.Path.PickVariant, query = Dict.fromList [ ( "first", "true" ) ], hash = Nothing }
             )
 
 
