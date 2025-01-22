@@ -135,7 +135,17 @@ update _ msg model =
             ( { model | currentTime = time }, Effect.none )
 
         Shared.Msg.GotTimeForFakedata time ->
-            ( { model | workoutHistory = generateFakeData time, currentTime = time }, Effect.none )
+            ( { model
+                | workoutHistory =
+                    if True then
+                        []
+
+                    else
+                        generateFakeData time
+                , currentTime = time
+              }
+            , Effect.none
+            )
 
         Shared.Msg.NoOp ->
             ( model, Effect.none )
