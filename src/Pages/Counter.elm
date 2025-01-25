@@ -454,6 +454,15 @@ view shared model =
 
                         _ ->
                             False
+
+                hasReachedGoal : Bool
+                hasReachedGoal =
+                    case model.sessionMode of
+                        Just (Workout { totalGoal }) ->
+                            model.currentReps >= totalGoal
+
+                        _ ->
+                            model.currentReps >= calculateNextGoal shared model
             in
             [ div [ class "flex flex-col items-center w-full h-screen relative" ]
                 [ h1 [ class "mt-2 mb-2 font-semibold font-lora text-xl text-amber-800" ]
@@ -464,32 +473,50 @@ view shared model =
                         ]
                         []
                     ]
-                , details [ class "mb-4" ]
-                    [ summary [ class "text-lg mt-4 text-amber-800 font-semibold hover:text-amber-900 cursor-pointer select-none border border-amber-800/30 rounded px-3 py-1" ]
-                        [ text "Show options" ]
-                    , div [ class "flex justify-between gap-4 mt-2" ]
-                        [ div [ class "flex gap-4" ]
-                            [ button
-                                [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
-                                , onClick ResetCounter
+                , div [ class "relative" ]
+                    [ if hasReachedGoal then
+                        div [ class "absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full animate-ping z-10" ] []
+
+                      else
+                        text ""
+                    , details
+                        [ class "mb-4"
+                        , classList [ ( "animate-pulse", model.currentReps > 0 && not hasReachedGoal ) ]
+                        ]
+                        [ summary [ class "text-lg mt-4 text-amber-800 font-semibold hover:text-amber-900 cursor-pointer select-none border border-amber-800/30 rounded px-3 py-1" ]
+                            [ text "Show actions" ]
+                        , div [ class "flex justify-between gap-4 mt-2" ]
+                            [ div [ class "flex gap-4" ]
+                                [ button
+                                    [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                                    , onClick ResetCounter
+                                    ]
+                                    [ text "Reset Counter" ]
+                                , button
+                                    [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                                    , onClick ChangeToMenu
+                                    ]
+                                    [ text "Menu" ]
                                 ]
-                                [ text "Reset Counter" ]
                             , button
-                                [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
-                                , onClick ChangeToMenu
+                                [ class "px-6 py-3 rounded-lg text-sm"
+                                , classList
+                                    [ ( "cursor-pointer bg-green-700/20 text-green-900 active:bg-green-700/30", not isWorkoutFinished && not hasReachedGoal )
+                                    , ( "opacity-50 cursor-not-allowed", isWorkoutFinished )
+                                    , ( "animate-pulse bg-green-600 hover:bg-green-700 text-white font-medium", hasReachedGoal )
+                                    ]
+                                , onClick GetWorkoutFinishedTime
+                                , Html.Attributes.disabled isWorkoutFinished
                                 ]
-                                [ text "Menu" ]
-                            ]
-                        , button
-                            [ class "px-6 py-3 rounded-lg bg-green-700/20 text-sm text-green-900"
-                            , classList
-                                [ ( "cursor-pointer active:bg-green-700/30", not isWorkoutFinished )
-                                , ( "opacity-50 cursor-not-allowed", isWorkoutFinished )
+                                [ text
+                                    (if hasReachedGoal then
+                                        "Save Workout! 🎉"
+
+                                     else
+                                        "Done"
+                                    )
                                 ]
-                            , onClick GetWorkoutFinishedTime
-                            , Html.Attributes.disabled isWorkoutFinished
                             ]
-                            [ text "Done" ]
                         ]
                     ]
                 , div
@@ -582,14 +609,19 @@ view shared model =
                                     ]
                                 , p [ class "mt-4" ]
                                     [ text "Take active rest by slow running in place between reps. Just don't stop until you're done!" ]
+                                , p [ class "mt-4" ]
+                                    [ text "When you're finished, click "
+                                    , span [ class "font-bold" ] [ text "Show actions" ]
+                                    , text " at the top and save your workout!"
+                                    ]
                                 , p [ class "italic mt-4" ]
                                     [ text "Let's grow stronger together! 🌱 → 🌳" ]
                                 ]
                             , button
-                                [ class "mt-6 w-full px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                                [ class "mt-6 w-full px-4 py-2 bg-amber-800 text-white rounded-lg hover:bg-amber-900"
                                 , onClick CloseWelcomeModal
                                 ]
-                                [ text "Got it, let's start! 💪" ]
+                                [ text "Let's go! 💪" ]
                             ]
                         ]
 
@@ -602,17 +634,17 @@ view shared model =
                                 [ text "Choose Your Practice Style" ]
                             , div [ class "space-y-4" ]
                                 [ button
-                                    [ class "w-full px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors mb-3"
+                                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors mb-3"
                                     , onClick (SelectMode Free)
                                     ]
                                     [ text "Freestyle" ]
                                 , button
-                                    [ class "w-full px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors mb-3"
+                                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors mb-3"
                                     , onClick (SelectMode (EMOM (defaultEMOMSettings (calculateNextGoal shared model))))
                                     ]
                                     [ text "EMOM (Every Minute On the Minute)" ]
                                 , button
-                                    [ class "w-full px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors"
                                     , onClick (SelectMode (Workout { totalGoal = 0 }))
                                     ]
                                     [ text "Workout ( 200% - 400% of goal)" ]
