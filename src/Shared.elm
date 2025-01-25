@@ -136,12 +136,7 @@ update _ msg model =
 
         Shared.Msg.GotTimeForFakedata time ->
             ( { model
-                | workoutHistory =
-                    if True then
-                        []
-
-                    else
-                        generateFakeData time
+                | workoutHistory = generateFakeData time
                 , currentTime = time
               }
             , Effect.none

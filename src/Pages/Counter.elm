@@ -481,7 +481,6 @@ view shared model =
                         text ""
                     , details
                         [ class "mb-4"
-                        , classList [ ( "animate-pulse", model.currentReps > 0 && not hasReachedGoal ) ]
                         ]
                         [ summary [ class "text-lg mt-4 text-amber-800 font-semibold hover:text-amber-900 cursor-pointer select-none border border-amber-800/30 rounded px-3 py-1" ]
                             [ text "Show actions" ]
@@ -503,14 +502,14 @@ view shared model =
                                 , classList
                                     [ ( "cursor-pointer bg-green-700/20 text-green-900 active:bg-green-700/30", not isWorkoutFinished && not hasReachedGoal )
                                     , ( "opacity-50 cursor-not-allowed", isWorkoutFinished )
-                                    , ( "animate-pulse bg-green-600 hover:bg-green-700 text-white font-medium", hasReachedGoal )
+                                    , ( "bg-green-600 hover:bg-green-700 text-white font-medium", hasReachedGoal )
                                     ]
                                 , onClick GetWorkoutFinishedTime
                                 , Html.Attributes.disabled isWorkoutFinished
                                 ]
                                 [ text
                                     (if hasReachedGoal then
-                                        "Save Workout! 🎉"
+                                        "Save Session! 🎉"
 
                                      else
                                         "Done"

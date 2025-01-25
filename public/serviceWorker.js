@@ -1,9 +1,9 @@
-const version = "v13";
+const version = "v14";
 const cacheName = `cache-${version}`;
 const assets = [
   "/",
   "/manifest.json",
-  "/styles.css",
+  `/styles.${version}.css`,
   "/icon/icon.svg",
   "/ios/180.png",
   "/ios/1024.png",
