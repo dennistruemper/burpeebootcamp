@@ -131,6 +131,7 @@ type Msg
     | StartEMOM
     | EMOMStarted Time.Posix
     | EMOMTick Time.Posix
+    | DebounceComplete Time.Posix
 
 
 type alias Model =
@@ -141,6 +142,7 @@ type alias Model =
     , sessionMode : Maybe SessionMode
     , isMysteryMode : Bool
     , redirectTime : Maybe Time.Posix
+    , isDebouncing : Bool
     }
 
 
@@ -153,6 +155,7 @@ init shared route _ =
       , sessionMode = Nothing
       , isMysteryMode = False
       , redirectTime = Nothing
+      , isDebouncing = False
       }
     , Effect.none
     )
@@ -166,37 +169,42 @@ update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
 update shared msg model =
     case msg of
         IncrementReps ->
-            let
-                requiredTouches : Int
-                requiredTouches =
-                    shared.currentBurpee
-                        |> Maybe.withDefault Burpee.default
-                        |> Burpee.groundTouchesRequired
+            if model.isDebouncing then
+                ( model, Effect.none )
 
-                newGroundTouches : Int
-                newGroundTouches =
-                    model.groundTouchesForCurrentRep + 1
+            else
+                let
+                    requiredTouches : Int
+                    requiredTouches =
+                        shared.currentBurpee
+                            |> Maybe.withDefault Burpee.default
+                            |> Burpee.groundTouchesRequired
 
-                shouldIncrementRep : Bool
-                shouldIncrementRep =
-                    newGroundTouches >= requiredTouches
-            in
-            ( { model
-                | currentReps =
-                    if shouldIncrementRep then
-                        model.currentReps + 1
+                    newGroundTouches : Int
+                    newGroundTouches =
+                        model.groundTouchesForCurrentRep + 1
 
-                    else
-                        model.currentReps
-                , groundTouchesForCurrentRep =
-                    if shouldIncrementRep then
-                        0
+                    shouldIncrementRep : Bool
+                    shouldIncrementRep =
+                        newGroundTouches >= requiredTouches
+                in
+                ( { model
+                    | currentReps =
+                        if shouldIncrementRep then
+                            model.currentReps + 1
 
-                    else
-                        newGroundTouches
-              }
-            , Effect.none
-            )
+                        else
+                            model.currentReps
+                    , groundTouchesForCurrentRep =
+                        if shouldIncrementRep then
+                            0
+
+                        else
+                            newGroundTouches
+                    , isDebouncing = True
+                  }
+                , Effect.none
+                )
 
         ResetCounter ->
             ( { model
@@ -389,6 +397,11 @@ update shared msg model =
         ConfigureEMOM settings ->
             ( { model | sessionMode = Just (EMOM settings) }, Effect.none )
 
+        DebounceComplete _ ->
+            ( { model | isDebouncing = False }
+            , Effect.none
+            )
+
 
 
 -- SUBSCRIPTIONS
@@ -409,11 +422,22 @@ isSessionStarted model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if isSessionStarted model then
-        Time.every 100 EMOMTick
+    let
+        debounce =
+            if model.isDebouncing then
+                Time.every 1000 DebounceComplete
 
-    else
-        Sub.none
+            else
+                Sub.none
+
+        emomTick =
+            if isSessionStarted model then
+                Time.every 100 EMOMTick
+
+            else
+                Sub.none
+    in
+    Sub.batch [ debounce, emomTick ]
 
 
 
@@ -527,12 +551,16 @@ view shared model =
                                 []
                            )
                     )
-                    [ div [ class "absolute inset-0 grid grid-cols-2 xl:grid-cols-4 gap-4 place-items-center place-content-center pointer-events-none overflow-hidden" ]
-                        (List.repeat 20
-                            (div [ class "text-amber-800/5 text-4xl font-bold rotate-[-20deg] text-center" ]
-                                [ text "NOSE TAP AREA" ]
+                    [ if model.isDebouncing then
+                        text ""
+
+                      else
+                        div [ class "absolute inset-0 grid grid-cols-2 xl:grid-cols-4 gap-4 place-items-center place-content-center pointer-events-none overflow-hidden animate-fade-in" ]
+                            (List.repeat 20
+                                (div [ class "text-amber-800/5 text-4xl font-bold rotate-[-20deg] text-center" ]
+                                    [ text "NOSE TAP AREA" ]
+                                )
                             )
-                        )
                     , case model.sessionMode of
                         Just (EMOM settings) ->
                             if settings.showSettings then
