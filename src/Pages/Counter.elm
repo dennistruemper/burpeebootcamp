@@ -1,4 +1,11 @@
-module Pages.Counter exposing (EMOMSettings, EMOMStatus, Model, Msg(..), SessionMode, page)
+module Pages.Counter exposing
+    ( EMOMSettings
+    , EMOMStatus(..)
+    , Model
+    , Msg(..)
+    , SessionMode(..)
+    , page
+    )
 
 import Burpee
 import Dict
@@ -397,8 +404,13 @@ update shared msg model =
         ConfigureEMOM settings ->
             ( { model | sessionMode = Just (EMOM settings) }, Effect.none )
 
-        DebounceComplete _ ->
-            ( { model | isDebouncing = False }
+        DebounceComplete time ->
+            let
+                isDebouncing : Bool
+                isDebouncing =
+                    Time.posixToMillis time == 0
+            in
+            ( { model | isDebouncing = isDebouncing }
             , Effect.none
             )
 
@@ -423,6 +435,7 @@ isSessionStarted model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     let
+        debounce : Sub Msg
         debounce =
             if model.isDebouncing then
                 Time.every 1000 DebounceComplete
@@ -430,6 +443,7 @@ subscriptions model =
             else
                 Sub.none
 
+        emomTick : Sub Msg
         emomTick =
             if isSessionStarted model then
                 Time.every 100 EMOMTick
