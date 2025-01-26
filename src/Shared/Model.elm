@@ -20,4 +20,5 @@ type alias Model =
     , initializing : Bool
     , currentTime : Time.Posix
     , version : String
+    , timeZone : Time.Zone
     }

@@ -21,4 +21,5 @@ type Msg
     | GotTimeForRepGoalCalculation Time.Posix
     | GotTime Time.Posix
     | GotTimeForFakedata Time.Posix
+    | GotTimeZone Time.Zone
     | NoOp

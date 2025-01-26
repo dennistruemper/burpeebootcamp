@@ -5,7 +5,7 @@ module Effect exposing
     , pushRoute, replaceRoute
     , pushRoutePath, replaceRoutePath
     , map, toCmd
-    , calculateRepGoal, getRandom, getTime, logError, newCurrentBurpee, storeBurpeeVariant, storeWorkout, storeWorkoutResult
+    , calculateRepGoal, getRandom, getTime, getTimeZone, logError, newCurrentBurpee, storeBurpeeVariant, storeWorkout, storeWorkoutResult
     )
 
 {-|
@@ -98,6 +98,11 @@ storeWorkoutResult result =
 getTime : (Time.Posix -> msg) -> Effect msg
 getTime gotTimeMsg =
     SendCmd (Time.now |> Task.perform gotTimeMsg)
+
+
+getTimeZone : (Time.Zone -> msg) -> Effect msg
+getTimeZone gotTimeZoneMsg =
+    SendCmd (Time.here |> Task.perform gotTimeZoneMsg)
 
 
 storeBurpeeVariant : Burpee -> Effect msg

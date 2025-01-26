@@ -3,12 +3,14 @@
     "review": "npx elm-review --compiler=$(which lamdera)",
     "review:fix": "npx elm-review --compiler=$(which lamdera) --fix",
     "review:watch": "npx elm-review --compiler=$(which lamdera) --watch",
+    "test": "elm-test-rs --compiler `which lamdera`",
+    "test-watch": "elm-test-rs --watch --compiler `which lamdera`",
     "build:css": "node scripts/css-build.js",
     "landing:build:css": "tailwindcss -i css/raw.css -o landingpage/styles.css",
     "watch:css": "node scripts/css-build.js --watch",
     "landing:watch:css": "tailwindcss -i css/raw.css -o landingpage/styles.css --watch",
     "generate:codecs": "npx elm-review --fix --template gampleman/elm-review-derive/preview",
-    "publish-check": "lamdera check && npm run review && node scripts/update-cache-version.js && npm run build:css && npm run git-add",
+    "publish-check": "npm run test && lamdera check && npm run review && node scripts/update-cache-version.js && npm run build:css && npm run git-add",
     "git-add": "git add public/serviceWorker.js elm-pkg-js/interop.js landingpage/index.html head.html **/styles.v*.css",
     "publish": "lamdera deploy"
   },
@@ -16,6 +18,7 @@
     "@tailwindcss/cli": "4.0.0-beta.9",
     "elm-land": "0.20.1",
     "elm-review": "2.12.0",
+    "elm-test-rs": "3.0.0-5",
     "lamdera": "0.19.1-1.3.2",
     "tailwindcss": "4.0.0-beta.9"
   }

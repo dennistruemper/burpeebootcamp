@@ -14,13 +14,12 @@ import Html exposing (Html, br, button, details, div, h1, h3, img, input, label,
 import Html.Attributes exposing (alt, class, classList, src, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Page exposing (Page)
-import Random
 import Route exposing (Route)
 import Route.Path
+import Session.Goal
 import Shared
 import Time
 import View exposing (View)
-import WorkoutResult exposing (WorkoutResult)
 
 
 page : Shared.Model -> Route () -> Page Model Msg
@@ -35,70 +34,6 @@ page shared route =
 
 
 -- INIT
-
-
-calculateNextGoal : Shared.Model -> Model -> Int
-calculateNextGoal shared model =
-    case model.overwriteRepGoal of
-        Just repGoal ->
-            Basics.max 10 repGoal
-
-        Nothing ->
-            let
-                lastWorkout : Maybe WorkoutResult
-                lastWorkout =
-                    shared.workoutHistory |> List.sortBy (\workout -> workout.timestamp |> Time.posixToMillis) |> List.reverse |> List.head
-
-                daysSinceLastWorkout : Int
-                daysSinceLastWorkout =
-                    case lastWorkout of
-                        Just workout ->
-                            Time.posixToMillis shared.currentTime
-                                - Time.posixToMillis workout.timestamp
-                                |> (\ms ->
-                                        toFloat ms / (1000 * 60 * 60 * 24)
-                                   )
-                                |> floor
-
-                        Nothing ->
-                            999
-
-                adjustedGoal : Int
-                adjustedGoal =
-                    if daysSinceLastWorkout <= 1 then
-                        -- Yesterday's workout
-                        case lastWorkout of
-                            Just lw ->
-                                let
-                                    wasGoalReached : Bool
-                                    wasGoalReached =
-                                        case lastWorkout of
-                                            Just workout ->
-                                                Maybe.map2 (\goal reps -> reps >= goal) workout.repGoal (Just workout.reps)
-                                                    |> Maybe.withDefault False
-
-                                            Nothing ->
-                                                False
-                                in
-                                if wasGoalReached then
-                                    (lw.repGoal |> Maybe.withDefault 10) + 1
-
-                                else
-                                    lw.repGoal |> Maybe.withDefault 10
-
-                            Nothing ->
-                                10
-
-                    else
-                        -- Missed days
-                        case lastWorkout of
-                            Just lw ->
-                                (lw.repGoal |> Maybe.withDefault 10) - (2 * (daysSinceLastWorkout - 1))
-
-                            Nothing ->
-                                10
-            in
-            Basics.max 10 adjustedGoal
 
 
 type SessionMode
@@ -234,7 +169,12 @@ update shared msg model =
                     { reps = model.currentReps
                     , burpee = Maybe.withDefault Burpee.default shared.currentBurpee
                     , timestamp = time
-                    , repGoal = Just (calculateNextGoal shared model)
+                    , repGoal =
+                        Just
+                            (Session.Goal.calculateNextGoal
+                                { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                                model.overwriteRepGoal
+                            )
                     }
                 , Effect.batch [ Effect.replaceRoutePath Route.Path.Results ]
                 ]
@@ -253,14 +193,12 @@ update shared msg model =
         SelectMode mode ->
             case mode of
                 Workout _ ->
-                    let
-                        dailyGoal : Int
-                        dailyGoal =
-                            calculateNextGoal shared model
-                    in
                     ( model
                     , Effect.getRandom
-                        (Random.int (min 200 (dailyGoal * 2)) (min 200 (dailyGoal * 4)))
+                        (Session.Goal.calculateWorkoutGoal
+                            { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                            model.overwriteRepGoal
+                        )
                         GotWorkoutGoal
                     )
 
@@ -268,7 +206,12 @@ update shared msg model =
                     let
                         repGoal : Int
                         repGoal =
-                            calculateNextGoal shared model
+                            Session.Goal.calculateNextGoal
+                                { lastSessions = shared.workoutHistory
+                                , currentTime = shared.currentTime
+                                , timeZone = shared.timeZone
+                                }
+                                model.overwriteRepGoal
                     in
                     ( { model
                         | sessionMode = Just (EMOM (defaultEMOMSettings repGoal))
@@ -313,7 +256,14 @@ update shared msg model =
 
                             isFailed : Bool
                             isFailed =
-                                isNewMinute && model.currentReps < min (calculateNextGoal shared model) (settings.repsPerMinute * settings.currentRound)
+                                isNewMinute
+                                    && model.currentReps
+                                    < min
+                                        (Session.Goal.calculateNextGoal
+                                            { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                                            model.overwriteRepGoal
+                                        )
+                                        (settings.repsPerMinute * settings.currentRound)
 
                             shouldStartWaiting : Bool
                             shouldStartWaiting =
@@ -389,7 +339,11 @@ update shared msg model =
                     let
                         emomSetting : EMOMSettings
                         emomSetting =
-                            defaultEMOMSettings (calculateNextGoal shared model)
+                            defaultEMOMSettings
+                                (Session.Goal.calculateNextGoal
+                                    { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                                    model.overwriteRepGoal
+                                )
                     in
                     ( { model
                         | sessionMode = Just (EMOM { emomSetting | startTime = time })
@@ -500,7 +454,10 @@ view shared model =
                             model.currentReps >= totalGoal
 
                         _ ->
-                            model.currentReps >= calculateNextGoal shared model
+                            model.currentReps
+                                >= Session.Goal.calculateNextGoal
+                                    { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                                    model.overwriteRepGoal
             in
             [ div [ class "flex flex-col items-center w-full h-screen relative" ]
                 [ h1 [ class "mt-2 mb-2 font-semibold font-lora text-xl text-amber-800" ]
@@ -578,7 +535,12 @@ view shared model =
                     , case model.sessionMode of
                         Just (EMOM settings) ->
                             if settings.showSettings then
-                                viewEMOMConfig (calculateNextGoal shared model) settings
+                                viewEMOMConfig
+                                    (Session.Goal.calculateNextGoal
+                                        { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                                        model.overwriteRepGoal
+                                    )
+                                    settings
 
                             else
                                 viewEMOMStatus shared model settings
@@ -603,7 +565,9 @@ view shared model =
                                         totalGoal
 
                                     _ ->
-                                        calculateNextGoal shared model
+                                        Session.Goal.calculateNextGoal
+                                            { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                                            model.overwriteRepGoal
                           in
                           div [ class "text-2xl opacity-80 text-amber-800" ]
                             [ text <| " / " ++ String.fromInt goal ++ " reps" ]
@@ -681,7 +645,17 @@ view shared model =
                                     [ text "Freestyle" ]
                                 , button
                                     [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors mb-3"
-                                    , onClick (SelectMode (EMOM (defaultEMOMSettings (calculateNextGoal shared model))))
+                                    , onClick
+                                        (SelectMode
+                                            (EMOM
+                                                (defaultEMOMSettings
+                                                    (Session.Goal.calculateNextGoal
+                                                        { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                                                        model.overwriteRepGoal
+                                                    )
+                                                )
+                                            )
+                                        )
                                     ]
                                     [ text "EMOM (Every Minute On the Minute)" ]
                                 , button
@@ -767,7 +741,12 @@ viewEMOMStatus shared model settings =
 
         repGoal : Int
         repGoal =
-            calculateNextGoal shared model
+            Session.Goal.calculateNextGoal
+                { lastSessions = shared.workoutHistory
+                , currentTime = shared.currentTime
+                , timeZone = shared.timeZone
+                }
+                model.overwriteRepGoal
 
         roundDisplay : String
         roundDisplay =

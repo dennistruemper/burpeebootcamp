@@ -62,8 +62,9 @@ init _ _ =
       , initializing = True
       , currentTime = Time.millisToPosix 0
       , version = "-"
+      , timeZone = Time.utc
       }
-    , timeEffect
+    , Effect.batch [ timeEffect, Effect.getTimeZone Shared.Msg.GotTimeZone ]
     )
 
 
@@ -133,6 +134,9 @@ update _ msg model =
 
         Shared.Msg.GotTime time ->
             ( { model | currentTime = time }, Effect.none )
+
+        Shared.Msg.GotTimeZone zone ->
+            ( { model | timeZone = zone }, Effect.none )
 
         Shared.Msg.GotTimeForFakedata time ->
             ( { model
