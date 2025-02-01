@@ -11,7 +11,7 @@ import Route.Path
 import Shared
 import Time
 import View exposing (View)
-import WorkoutResult exposing (WorkoutResult)
+import WorkoutResult exposing (StoredSessionType(..), WorkoutResult)
 
 
 page : Shared.Model -> Route () -> Page Model Msg
@@ -505,7 +505,7 @@ viewPopover dayStats =
             bg-black/30
             transition-opacity duration-300
           """
-        , onClick CloseSlider -- Close when clicking backdrop
+        , onClick CloseSlider
         ]
         [ div
             [ class """
@@ -517,7 +517,7 @@ viewPopover dayStats =
                 overflow-y-auto
               """
             , style "min-width" "320px"
-            , onClick NoOp -- Prevent clicks inside panel from closing
+            , onClick NoOp
             ]
             [ div [ class "sticky top-0 bg-white border-b border-amber-100 p-4 flex justify-between items-center" ]
                 [ div [ class "text-lg font-medium text-amber-900" ]
@@ -580,6 +580,8 @@ viewPopover dayStats =
                                             Nothing ->
                                                 text (String.fromInt session.reps ++ " reps")
                                         ]
+                                    , div [ class "text-sm text-amber-600 mt-1" ]
+                                        [ text (sessionTypeToString session.sessionType) ]
                                     ]
                             )
                             dayStats.sessions
@@ -588,6 +590,25 @@ viewPopover dayStats =
                 ]
             ]
         ]
+
+
+sessionTypeToString : Maybe StoredSessionType -> String
+sessionTypeToString maybeType =
+    case maybeType of
+        Just (StoredAMRAP { duration }) ->
+            "AMRAP (" ++ String.fromInt duration ++ " min)"
+
+        Just StoredEMOM ->
+            "EMOM"
+
+        Just StoredWorkout ->
+            "Workout"
+
+        Just StoredFree ->
+            "Free Practice"
+
+        Nothing ->
+            "Free Practice"
 
 
 

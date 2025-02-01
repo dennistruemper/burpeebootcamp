@@ -1,5 +1,7 @@
 module Pages.Counter exposing
-    ( EMOMSettings
+    ( AMRAPSettings
+    , AMRAPStatus
+    , EMOMSettings
     , EMOMStatus(..)
     , Model
     , Msg(..)
@@ -10,7 +12,8 @@ module Pages.Counter exposing
 import Burpee
 import Dict
 import Effect exposing (Effect)
-import Html exposing (Html, br, button, details, div, h1, h3, img, input, label, li, p, span, summary, text, ul)
+import Env
+import Html exposing (Html, br, button, details, div, h1, h3, h4, img, input, label, li, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, src, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Page exposing (Page)
@@ -20,6 +23,7 @@ import Session.Goal
 import Shared
 import Time
 import View exposing (View)
+import WorkoutResult
 
 
 page : Shared.Model -> Route () -> Page Model Msg
@@ -40,6 +44,7 @@ type SessionMode
     = Free
     | EMOM EMOMSettings
     | Workout { totalGoal : Int }
+    | AMRAP AMRAPSettings
 
 
 type EMOMStatus
@@ -47,6 +52,12 @@ type EMOMStatus
     | InProgress
     | Complete
     | Failed
+
+
+type AMRAPStatus
+    = NotStarted
+    | Running
+    | Finished
 
 
 type alias EMOMSettings =
@@ -57,6 +68,16 @@ type alias EMOMSettings =
     , status : EMOMStatus
     , showSettings : Bool
     , currentTickTime : Time.Posix
+    }
+
+
+type alias AMRAPSettings =
+    { duration : Int -- in minutes
+    , startTime : Time.Posix
+    , currentTime : Time.Posix
+    , status : AMRAPStatus
+    , showSettings : Bool
+    , previousBest : Maybe Int
     }
 
 
@@ -74,6 +95,12 @@ type Msg
     | EMOMStarted Time.Posix
     | EMOMTick Time.Posix
     | DebounceComplete Time.Posix
+    | ConfigureAMRAP AMRAPSettings
+    | StartAMRAP
+    | AMRAPStarted Time.Posix
+    | AMRAPTick Time.Posix
+    | ToggleHelpModal
+    | CloseHelpModal
 
 
 type alias Model =
@@ -85,6 +112,7 @@ type alias Model =
     , isMysteryMode : Bool
     , redirectTime : Maybe Time.Posix
     , isDebouncing : Bool
+    , showHelpModal : Bool
     }
 
 
@@ -98,6 +126,7 @@ init shared route _ =
       , isMysteryMode = False
       , redirectTime = Nothing
       , isDebouncing = False
+      , showHelpModal = False
       }
     , Effect.none
     )
@@ -115,38 +144,16 @@ update shared msg model =
                 ( model, Effect.none )
 
             else
-                let
-                    requiredTouches : Int
-                    requiredTouches =
-                        shared.currentBurpee
-                            |> Maybe.withDefault Burpee.default
-                            |> Burpee.groundTouchesRequired
-
-                    newGroundTouches : Int
-                    newGroundTouches =
-                        model.groundTouchesForCurrentRep + 1
-
-                    shouldIncrementRep : Bool
-                    shouldIncrementRep =
-                        newGroundTouches >= requiredTouches
-                in
-                ( { model
-                    | currentReps =
-                        if shouldIncrementRep then
-                            model.currentReps + 1
+                case model.sessionMode of
+                    Just (AMRAP settings) ->
+                        if settings.status == Finished then
+                            ( model, Effect.none )
 
                         else
-                            model.currentReps
-                    , groundTouchesForCurrentRep =
-                        if shouldIncrementRep then
-                            0
+                            incrementReps shared model
 
-                        else
-                            newGroundTouches
-                    , isDebouncing = True
-                  }
-                , Effect.none
-                )
+                    _ ->
+                        incrementReps shared model
 
         ResetCounter ->
             ( { model
@@ -163,6 +170,22 @@ update shared msg model =
             )
 
         GotWorkoutFinishedTime time ->
+            let
+                sessionType : Maybe WorkoutResult.StoredSessionType
+                sessionType =
+                    case model.sessionMode of
+                        Just (Workout _) ->
+                            Just WorkoutResult.StoredWorkout
+
+                        Just (EMOM _) ->
+                            Just WorkoutResult.StoredEMOM
+
+                        Just (AMRAP settings) ->
+                            Just (WorkoutResult.StoredAMRAP { duration = settings.duration })
+
+                        _ ->
+                            Just WorkoutResult.StoredFree
+            in
             ( { model | redirectTime = Nothing }
             , Effect.batch
                 [ Effect.storeWorkoutResult
@@ -172,9 +195,13 @@ update shared msg model =
                     , repGoal =
                         Just
                             (Session.Goal.calculateNextGoal
-                                { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                                { lastSessions = shared.workoutHistory
+                                , currentTime = shared.currentTime
+                                , timeZone = shared.timeZone
+                                }
                                 model.overwriteRepGoal
                             )
+                    , sessionType = sessionType
                     }
                 , Effect.batch [ Effect.replaceRoutePath Route.Path.Results ]
                 ]
@@ -222,6 +249,24 @@ update shared msg model =
 
                 Free ->
                     ( { model | sessionMode = Just Free }
+                    , Effect.none
+                    )
+
+                AMRAP _ ->
+                    let
+                        previousBest : Maybe Int
+                        previousBest =
+                            findBestAMRAPScore shared.workoutHistory defaultAMRAPSettings.duration
+                    in
+                    ( { model
+                        | sessionMode =
+                            Just
+                                (AMRAP
+                                    { defaultAMRAPSettings
+                                        | previousBest = previousBest
+                                    }
+                                )
+                      }
                     , Effect.none
                     )
 
@@ -368,6 +413,99 @@ update shared msg model =
             , Effect.none
             )
 
+        ConfigureAMRAP settings ->
+            ( { model | sessionMode = Just (AMRAP settings) }, Effect.none )
+
+        StartAMRAP ->
+            ( model, Effect.getTime AMRAPStarted )
+
+        AMRAPStarted time ->
+            case model.sessionMode of
+                Just (AMRAP settings) ->
+                    ( { model
+                        | sessionMode =
+                            Just
+                                (AMRAP
+                                    { settings
+                                        | showSettings = False
+                                        , status = Running
+                                        , startTime = time
+                                        , currentTime = time
+                                    }
+                                )
+                        , currentReps = 0
+                      }
+                    , Effect.none
+                    )
+
+                _ ->
+                    ( model, Effect.none )
+
+        AMRAPTick newTime ->
+            case model.sessionMode of
+                Just (AMRAP settings) ->
+                    let
+                        ( remainingTime, _ ) =
+                            remainingAMRAPTime { settings | currentTime = newTime }
+
+                        isComplete : Bool
+                        isComplete =
+                            remainingTime <= 0
+
+                        shouldStartWaiting : Bool
+                        shouldStartWaiting =
+                            isComplete && settings.status == Running
+
+                        shouldRedirectNow : Bool
+                        shouldRedirectNow =
+                            case model.redirectTime of
+                                Just startWait ->
+                                    Time.posixToMillis newTime - Time.posixToMillis startWait >= 3000
+
+                                Nothing ->
+                                    False
+
+                        newSettings : AMRAPSettings
+                        newSettings =
+                            { settings
+                                | currentTime = newTime
+                                , status =
+                                    if isComplete then
+                                        Finished
+
+                                    else
+                                        settings.status
+                            }
+                    in
+                    ( { model
+                        | sessionMode = Just (AMRAP newSettings)
+                        , redirectTime =
+                            if shouldStartWaiting then
+                                Just newTime
+
+                            else
+                                model.redirectTime
+                      }
+                    , if shouldRedirectNow then
+                        Effect.getTime GotWorkoutFinishedTime
+
+                      else
+                        Effect.none
+                    )
+
+                _ ->
+                    ( model, Effect.none )
+
+        ToggleHelpModal ->
+            ( { model | showHelpModal = True }
+            , Effect.none
+            )
+
+        CloseHelpModal ->
+            ( { model | showHelpModal = False }
+            , Effect.none
+            )
+
 
 
 -- SUBSCRIPTIONS
@@ -397,15 +535,27 @@ subscriptions model =
             else
                 Sub.none
 
-        emomTick : Sub Msg
-        emomTick =
-            if isSessionStarted model then
-                Time.every 100 EMOMTick
+        workoutTick : Sub Msg
+        workoutTick =
+            case model.sessionMode of
+                Just (EMOM settings) ->
+                    if settings.status == InProgress || settings.status == Complete || settings.status == Failed then
+                        Time.every 100 EMOMTick
 
-            else
-                Sub.none
+                    else
+                        Sub.none
+
+                Just (AMRAP settings) ->
+                    if settings.status == Running || settings.status == Finished then
+                        Time.every 100 AMRAPTick
+
+                    else
+                        Sub.none
+
+                _ ->
+                    Sub.none
     in
-    Sub.batch [ debounce, emomTick ]
+    Sub.batch [ debounce, workoutTick ]
 
 
 
@@ -422,6 +572,17 @@ defaultEMOMSettings repGoal =
     , status = WaitingToStart
     , showSettings = True
     , currentTickTime = Time.millisToPosix 0
+    }
+
+
+defaultAMRAPSettings : AMRAPSettings
+defaultAMRAPSettings =
+    { duration = 20
+    , startTime = Time.millisToPosix 0
+    , currentTime = Time.millisToPosix 0
+    , status = NotStarted
+    , showSettings = True
+    , previousBest = Nothing
     }
 
 
@@ -452,6 +613,9 @@ view shared model =
                     case model.sessionMode of
                         Just (Workout { totalGoal }) ->
                             model.currentReps >= totalGoal
+
+                        Just (AMRAP settings) ->
+                            settings.status == Finished
 
                         _ ->
                             model.currentReps
@@ -545,51 +709,110 @@ view shared model =
                             else
                                 viewEMOMStatus shared model settings
 
+                        Just (AMRAP settings) ->
+                            if settings.showSettings then
+                                viewAMRAPConfig shared settings
+
+                            else
+                                let
+                                    ( timeRemaining, progress ) =
+                                        remainingAMRAPTime settings
+                                in
+                                div [ class "flex flex-col items-center gap-4" ]
+                                    [ if settings.status == Finished then
+                                        div [ class "text-4xl font-bold text-amber-900 mb-2" ]
+                                            [ text "Time's up!" ]
+
+                                      else
+                                        let
+                                            minutes : Int
+                                            minutes =
+                                                timeRemaining // 60
+
+                                            seconds : Int
+                                            seconds =
+                                                modBy 60 timeRemaining
+
+                                            timeDisplay : String
+                                            timeDisplay =
+                                                String.fromInt minutes
+                                                    ++ ":"
+                                                    ++ (if seconds < 10 then
+                                                            "0"
+
+                                                        else
+                                                            ""
+                                                       )
+                                                    ++ String.fromInt seconds
+                                        in
+                                        div [ class "text-4xl font-bold text-amber-900 mb-2" ]
+                                            [ text timeDisplay ]
+                                    , div [ class "text-6xl font-bold text-amber-900" ]
+                                        [ text (String.fromInt model.currentReps) ]
+                                    , div [ class "text-2xl text-amber-800" ]
+                                        [ text "reps" ]
+                                    , div [ class "w-64 bg-amber-200 rounded-full h-2 mt-2" ]
+                                        [ div
+                                            [ class "bg-amber-600 h-2 rounded-full transition-all duration-200"
+                                            , style "width" (String.fromInt progress ++ "%")
+                                            ]
+                                            []
+                                        ]
+                                    , case settings.previousBest of
+                                        Just best ->
+                                            div [ class "text-xl text-amber-800 mt-2" ]
+                                                [ text <| "Previous best: " ++ String.fromInt best ]
+
+                                        Nothing ->
+                                            text ""
+                                    , div [ class "text-sm text-amber-800/70 mt-4 italic text-center" ]
+                                        [ text "Keep pushing! Don't stop until time runs out!" ]
+                                    ]
+
                         _ ->
-                            text ""
-                    , div
-                        [ class "flex flex-col items-center gap-2 relative"
-                        , classList
-                            [ ( "animate-scale-count", model.currentReps > 0 )
-                            ]
-                        ]
-                        [ div [ class "text-amber-800 opacity-80 text-sm mb-2" ]
-                            [ text (Maybe.withDefault Burpee.default shared.currentBurpee |> Burpee.getDisplayName) ]
-                        , div [ class "text-6xl font-bold text-amber-900" ]
-                            [ text (String.fromInt model.currentReps) ]
-                        , let
-                            goal : Int
-                            goal =
-                                case model.sessionMode of
-                                    Just (Workout { totalGoal }) ->
-                                        totalGoal
+                            div
+                                [ class "flex flex-col items-center gap-2 relative"
+                                , classList
+                                    [ ( "animate-scale-count", model.currentReps > 0 )
+                                    ]
+                                ]
+                                [ div [ class "text-amber-800 opacity-80 text-sm mb-2" ]
+                                    [ text (Maybe.withDefault Burpee.default shared.currentBurpee |> Burpee.getDisplayName) ]
+                                , div [ class "text-6xl font-bold text-amber-900" ]
+                                    [ text (String.fromInt model.currentReps) ]
+                                , let
+                                    goal : Int
+                                    goal =
+                                        case model.sessionMode of
+                                            Just (Workout { totalGoal }) ->
+                                                totalGoal
 
-                                    _ ->
-                                        Session.Goal.calculateNextGoal
-                                            { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
-                                            model.overwriteRepGoal
-                          in
-                          div [ class "text-2xl opacity-80 text-amber-800" ]
-                            [ text <| " / " ++ String.fromInt goal ++ " reps" ]
-                        , let
-                            requiredTouches : Int
-                            requiredTouches =
-                                shared.currentBurpee
-                                    |> Maybe.withDefault Burpee.default
-                                    |> Burpee.groundTouchesRequired
-                          in
-                          if requiredTouches > 1 then
-                            div [ class "text-lg text-amber-800 mt-2" ]
-                                [ text <| "Ground touches: " ++ String.fromInt model.groundTouchesForCurrentRep ++ "/" ++ String.fromInt requiredTouches ]
+                                            _ ->
+                                                Session.Goal.calculateNextGoal
+                                                    { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
+                                                    model.overwriteRepGoal
+                                  in
+                                  div [ class "text-2xl opacity-80 text-amber-800" ]
+                                    [ text <| " / " ++ String.fromInt goal ++ " reps" ]
+                                , let
+                                    requiredTouches : Int
+                                    requiredTouches =
+                                        shared.currentBurpee
+                                            |> Maybe.withDefault Burpee.default
+                                            |> Burpee.groundTouchesRequired
+                                  in
+                                  if requiredTouches > 1 then
+                                    div [ class "text-lg text-amber-800 mt-2" ]
+                                        [ text <| "Ground touches: " ++ String.fromInt model.groundTouchesForCurrentRep ++ "/" ++ String.fromInt requiredTouches ]
 
-                          else
-                            text ""
-                        , div [ class "text-sm text-amber-800/70 mt-2 italic text-center" ]
-                            [ text "Take active rest by slow running in place"
-                            , br [] []
-                            , text "Just don't stop until you're done!"
-                            ]
-                        ]
+                                  else
+                                    text ""
+                                , div [ class "text-sm text-amber-800/70 mt-2 italic text-center" ]
+                                    [ text "Take active rest by slow running in place"
+                                    , br [] []
+                                    , text "Just don't stop until you're done!"
+                                    ]
+                                ]
                     , div
                         [ class "text-lg text-amber-800 transition-opacity duration-300"
                         , classList
@@ -633,39 +856,12 @@ view shared model =
                   else
                     text ""
                 , if model.sessionMode == Nothing then
-                    div [ class "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" ]
-                        [ div [ class "bg-white p-6 rounded-lg shadow-xl max-w-sm mx-4" ]
-                            [ h3 [ class "text-xl font-bold text-amber-900 mb-4" ]
-                                [ text "Choose Your Practice Style" ]
-                            , div [ class "space-y-4" ]
-                                [ button
-                                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors mb-3"
-                                    , onClick (SelectMode Free)
-                                    ]
-                                    [ text "Freestyle" ]
-                                , button
-                                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors mb-3"
-                                    , onClick
-                                        (SelectMode
-                                            (EMOM
-                                                (defaultEMOMSettings
-                                                    (Session.Goal.calculateNextGoal
-                                                        { lastSessions = shared.workoutHistory, currentTime = shared.currentTime, timeZone = shared.timeZone }
-                                                        model.overwriteRepGoal
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ]
-                                    [ text "EMOM (Every Minute On the Minute)" ]
-                                , button
-                                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors"
-                                    , onClick (SelectMode (Workout { totalGoal = 0 }))
-                                    ]
-                                    [ text "Workout ( 200% - 400% of goal)" ]
-                                ]
-                            ]
-                        ]
+                    viewSessionModeSelection shared model
+
+                  else
+                    text ""
+                , if model.showHelpModal then
+                    viewHelpModal
 
                   else
                     text ""
@@ -796,6 +992,114 @@ viewEMOMStats model settings currentRoundGoal =
         ]
 
 
+viewAMRAPConfig : Shared.Model -> AMRAPSettings -> Html Msg
+viewAMRAPConfig shared settings =
+    let
+        hasAnyAMRAPHistory : Bool
+        hasAnyAMRAPHistory =
+            shared.workoutHistory
+                |> List.any
+                    (\workout ->
+                        case workout.sessionType of
+                            Just (WorkoutResult.StoredAMRAP _) ->
+                                True
+
+                            _ ->
+                                False
+                    )
+    in
+    div [ class "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" ]
+        [ div [ class "bg-white p-6 rounded-lg shadow-xl max-w-sm mx-4" ]
+            [ h3 [ class "text-xl font-bold text-amber-900 mb-4" ]
+                [ text "Configure AMRAP Session" ]
+            , if not hasAnyAMRAPHistory then
+                div
+                    [ class """
+                        mb-4 p-3 rounded-lg
+                        bg-amber-50 border border-amber-200
+                        text-amber-800 text-sm
+                      """
+                    ]
+                    [ div [ class "font-medium mb-1" ]
+                        [ text "⚠️ First AMRAP Session" ]
+                    , p []
+                        [ text """
+                            Remember: Quality over quantity! Maintain proper form throughout
+                            the session to prevent injury. It's better to do fewer reps
+                            with good form than many with poor form.
+                          """
+                        ]
+                    ]
+
+              else
+                text ""
+            , div [ class "space-y-4" ]
+                [ div [ class "flex flex-col gap-2" ]
+                    [ div [ class "flex justify-between items-center" ]
+                        [ label [ class "text-amber-900" ] [ text "Duration (minutes)" ]
+                        , span [ class "text-amber-900 font-bold" ]
+                            [ text (String.fromInt settings.duration) ]
+                        ]
+                    , input
+                        [ type_ "range"
+                        , Html.Attributes.min
+                            "1"
+                        , Html.Attributes.max
+                            (if Env.mode == Env.Production then
+                                "60"
+
+                             else
+                                "20"
+                            )
+                        , Html.Attributes.step
+                            "1"
+                        , value (String.fromInt settings.duration)
+                        , onInput
+                            (\str ->
+                                let
+                                    newDuration : Int
+                                    newDuration =
+                                        Maybe.withDefault settings.duration (String.toInt str)
+
+                                    previousBest : Maybe Int
+                                    previousBest =
+                                        findBestAMRAPScore shared.workoutHistory newDuration
+                                in
+                                ConfigureAMRAP
+                                    { settings
+                                        | duration = newDuration
+                                        , previousBest = previousBest
+                                    }
+                            )
+                        , class "w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
+                        ]
+                        []
+                    ]
+                , case settings.previousBest of
+                    Just best ->
+                        div [ class "text-amber-800 mt-2 p-3 bg-amber-50 rounded-lg" ]
+                            [ div [ class "font-medium" ] [ text "Previous Best" ]
+                            , div [ class "text-2xl font-bold" ]
+                                [ text (String.fromInt best)
+                                , span [ class "text-base font-normal ml-2" ] [ text "reps" ]
+                                ]
+                            , div [ class "text-sm text-amber-600" ]
+                                [ text ("in " ++ String.fromInt settings.duration ++ " minutes") ]
+                            ]
+
+                    Nothing ->
+                        div [ class "text-amber-800/70 text-sm italic text-center" ]
+                            [ text "No previous attempts for this duration" ]
+                , button
+                    [ class "w-full px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors mt-4"
+                    , onClick StartAMRAP
+                    ]
+                    [ text "Start AMRAP" ]
+                ]
+            ]
+        ]
+
+
 
 -- Helper functions
 
@@ -813,3 +1117,186 @@ remainingTimeInCurrentMinute startTime currentTime =
 remainingTimePercent : Int -> Float
 remainingTimePercent seconds =
     toFloat seconds / 60.0 * 100
+
+
+remainingAMRAPTime : AMRAPSettings -> ( Int, Int )
+remainingAMRAPTime settings =
+    let
+        elapsed : Int
+        elapsed =
+            (Time.posixToMillis settings.currentTime - Time.posixToMillis settings.startTime) // 1000
+
+        totalSeconds : Int
+        totalSeconds =
+            settings.duration * 60
+    in
+    ( max 0 (totalSeconds - elapsed)
+    , round (toFloat elapsed / toFloat totalSeconds * 100)
+    )
+
+
+findBestAMRAPScore : List WorkoutResult.WorkoutResult -> Int -> Maybe Int
+findBestAMRAPScore history selectedDuration =
+    history
+        |> List.filterMap
+            (\workout ->
+                case workout.sessionType of
+                    Just (WorkoutResult.StoredAMRAP { duration }) ->
+                        if duration == selectedDuration then
+                            Just workout.reps
+
+                        else
+                            Nothing
+
+                    _ ->
+                        Nothing
+            )
+        |> List.maximum
+
+
+
+-- Helper function to extract the increment logic
+
+
+incrementReps : Shared.Model -> Model -> ( Model, Effect Msg )
+incrementReps shared model =
+    let
+        requiredTouches : Int
+        requiredTouches =
+            shared.currentBurpee
+                |> Maybe.withDefault Burpee.default
+                |> Burpee.groundTouchesRequired
+
+        newGroundTouches : Int
+        newGroundTouches =
+            model.groundTouchesForCurrentRep + 1
+
+        shouldIncrementRep : Bool
+        shouldIncrementRep =
+            newGroundTouches >= requiredTouches
+    in
+    ( { model
+        | currentReps =
+            if shouldIncrementRep then
+                model.currentReps + 1
+
+            else
+                model.currentReps
+        , groundTouchesForCurrentRep =
+            if shouldIncrementRep then
+                0
+
+            else
+                newGroundTouches
+        , isDebouncing = True
+      }
+    , Effect.none
+    )
+
+
+viewSessionModeSelection : Shared.Model -> Model -> Html Msg
+viewSessionModeSelection shared model =
+    div [ class "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" ]
+        [ div [ class "bg-white p-6 rounded-lg shadow-xl max-w-sm mx-4" ]
+            [ div [ class "flex justify-between items-center mb-4" ]
+                [ h3 [ class "text-xl font-bold text-amber-900" ]
+                    [ text "Choose Your Practice Style" ]
+                , button
+                    [ class """
+                        w-8 h-8
+                        flex items-center justify-center
+                        rounded-full
+                        bg-amber-100 hover:bg-amber-200
+                        text-amber-800
+                        transition-colors
+                      """
+                    , onClick ToggleHelpModal
+                    ]
+                    [ text "?" ]
+                ]
+            , div [ class "space-y-4" ]
+                [ button
+                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors"
+                    , onClick (SelectMode Free)
+                    ]
+                    [ text "Free Practice" ]
+                , button
+                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors"
+                    , onClick
+                        (SelectMode
+                            (EMOM
+                                (defaultEMOMSettings
+                                    (Session.Goal.calculateNextGoal
+                                        { lastSessions = shared.workoutHistory
+                                        , currentTime = shared.currentTime
+                                        , timeZone = shared.timeZone
+                                        }
+                                        model.overwriteRepGoal
+                                    )
+                                )
+                            )
+                        )
+                    ]
+                    [ text "EMOM" ]
+                , button
+                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors"
+                    , onClick (SelectMode (Workout { totalGoal = 0 }))
+                    ]
+                    [ text "Workout" ]
+                , button
+                    [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors"
+                    , onClick (SelectMode (AMRAP defaultAMRAPSettings))
+                    ]
+                    [ text "AMRAP" ]
+                ]
+            ]
+        ]
+
+
+viewHelpModal : Html Msg
+viewHelpModal =
+    div
+        [ class "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        , onClick CloseHelpModal
+        ]
+        [ div
+            [ class "bg-white p-6 rounded-lg shadow-xl max-w-sm mx-4"
+
+            --, onClick (stopPropagation CloseHelpModal)
+            ]
+            [ div [ class "flex justify-between items-center mb-4" ]
+                [ h3 [ class "text-xl font-bold text-amber-900" ]
+                    [ text "Practice Styles Explained" ]
+                , button
+                    [ class """
+                        w-8 h-8
+                        flex items-center justify-center
+                        rounded-full
+                        bg-amber-100 hover:bg-amber-200
+                        text-amber-800
+                        transition-colors
+                      """
+                    , onClick CloseHelpModal
+                    ]
+                    [ text "×" ]
+                ]
+            , div [ class "space-y-4 text-amber-800" ]
+                [ div [ class "space-y-2" ]
+                    [ h4 [ class "font-bold" ] [ text "Free Practice" ]
+                    , p [] [ text "Practice at your own pace with a target goal." ]
+                    ]
+                , div [ class "space-y-2" ]
+                    [ h4 [ class "font-bold" ] [ text "EMOM" ]
+                    , p [] [ text "Every Minute On the Minute: Complete a set number of reps within each minute." ]
+                    ]
+                , div [ class "space-y-2" ]
+                    [ h4 [ class "font-bold" ] [ text "Workout" ]
+                    , p [] [ text "Challenge yourself with a goal between 200% - 400% of your regular goal." ]
+                    ]
+                , div [ class "space-y-2" ]
+                    [ h4 [ class "font-bold" ] [ text "AMRAP" ]
+                    , p [] [ text "As Many Reps As Possible: Complete as many reps as you can within a time limit." ]
+                    ]
+                ]
+            ]
+        ]

@@ -21,7 +21,7 @@ import Route exposing (Route)
 import Shared.Model
 import Shared.Msg
 import Time
-import WorkoutResult exposing (WorkoutResult)
+import WorkoutResult exposing (StoredSessionType(..), WorkoutResult)
 
 
 
@@ -89,6 +89,7 @@ update _ msg model =
                             , burpee = burpee
                             , timestamp = result.timestamp
                             , repGoal = result.repGoal
+                            , sessionType = result.sessionType
                             }
                     in
                     ( { model
@@ -165,16 +166,19 @@ generateFakeData time =
       , burpee = Burpee.default
       , timestamp = now - msPerDay |> Time.millisToPosix -- Yesterday
       , repGoal = Just 20
+      , sessionType = Just StoredFree
       }
     , { reps = 13
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 2) |> Time.millisToPosix -- 2 days ago
       , repGoal = Just 19
+      , sessionType = Just StoredFree
       }
     , { reps = 10
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 3) |> Time.millisToPosix -- 3 days ago
       , repGoal = Just 18
+      , sessionType = Just StoredFree
       }
 
     -- 4 days ago intentionally missing
@@ -182,31 +186,37 @@ generateFakeData time =
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 5) |> Time.millisToPosix -- 5 days ago
       , repGoal = Just 20
+      , sessionType = Just StoredFree
       }
     , { reps = 5
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 6) |> Time.millisToPosix -- 6 days ago
       , repGoal = Just 19
+      , sessionType = Just StoredFree
       }
     , { reps = 5
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 8) |> Time.millisToPosix -- 6 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
     , { reps = 5
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 10) |> Time.millisToPosix -- 6 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
     , { reps = 15
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 35) |> Time.millisToPosix -- 35 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
     , { reps = 12
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 36) |> Time.millisToPosix -- 36 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
 
     -- 37-39 days ago intentionally missing
@@ -214,16 +224,19 @@ generateFakeData time =
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 40) |> Time.millisToPosix -- 40 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
     , { reps = 11
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 41) |> Time.millisToPosix -- 41 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
     , { reps = 1111
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 42) |> Time.millisToPosix -- 41 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
 
     -- 42-44 days ago intentionally missing
@@ -231,16 +244,19 @@ generateFakeData time =
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 45) |> Time.millisToPosix -- 45 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
     , { reps = 16
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 46) |> Time.millisToPosix -- 46 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
     , { reps = 12
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 47) |> Time.millisToPosix -- 47 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
 
     -- 48-50 days ago intentionally missing
@@ -248,11 +264,13 @@ generateFakeData time =
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 51) |> Time.millisToPosix -- 51 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
     , { reps = 9
       , burpee = Burpee.default
       , timestamp = now - (msPerDay * 52) |> Time.millisToPosix -- 52 days ago
       , repGoal = Just 10
+      , sessionType = Just StoredFree
       }
     ]
 
