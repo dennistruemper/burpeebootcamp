@@ -530,7 +530,7 @@ subscriptions model =
         debounce : Sub Msg
         debounce =
             if model.isDebouncing then
-                Time.every 1000 DebounceComplete
+                Time.every 500 DebounceComplete
 
             else
                 Sub.none
