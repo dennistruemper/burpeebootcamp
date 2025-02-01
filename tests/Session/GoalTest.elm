@@ -21,6 +21,7 @@ suite =
                                   , repGoal = Just 15
                                   , timestamp = Time.millisToPosix (dayOffset -1)
                                   , burpee = defaultBurpee
+                                  , sessionType = Nothing
                                   }
                                 ]
                             , currentTime = Time.millisToPosix 0
@@ -39,6 +40,7 @@ suite =
                                   , repGoal = Just 15
                                   , timestamp = Time.millisToPosix (dayOffset -1)
                                   , burpee = defaultBurpee
+                                  , sessionType = Nothing
                                   }
                                 ]
                             , currentTime = Time.millisToPosix 0
@@ -58,6 +60,7 @@ suite =
                                       , repGoal = Just 20
                                       , timestamp = Time.millisToPosix (dayOffset -2)
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = Time.millisToPosix 0
@@ -76,6 +79,7 @@ suite =
                                       , repGoal = Just 20
                                       , timestamp = Time.millisToPosix (dayOffset -3)
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = Time.millisToPosix 0
@@ -94,6 +98,7 @@ suite =
                                       , repGoal = Just 12
                                       , timestamp = Time.millisToPosix (dayOffset -5)
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = Time.millisToPosix 0
@@ -113,6 +118,7 @@ suite =
                                   , repGoal = Just 15
                                   , timestamp = Time.millisToPosix (dayOffset -1)
                                   , burpee = defaultBurpee
+                                  , sessionType = Nothing
                                   }
                                 ]
                             , currentTime = Time.millisToPosix 0
@@ -152,6 +158,7 @@ suite =
                                       , repGoal = Just 15
                                       , timestamp = sessionTime
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = currentTime
@@ -178,6 +185,7 @@ suite =
                                       , repGoal = Just 15
                                       , timestamp = sessionTime
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = currentTime
@@ -204,6 +212,7 @@ suite =
                                       , repGoal = Just 15
                                       , timestamp = sessionTime
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = currentTime
@@ -230,6 +239,7 @@ suite =
                                       , repGoal = Just 15
                                       , timestamp = sessionTime
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = currentTime
@@ -256,6 +266,7 @@ suite =
                                       , repGoal = Just 15
                                       , timestamp = sessionTime
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = currentTime
@@ -276,11 +287,13 @@ suite =
                                       , repGoal = Just 15
                                       , timestamp = Time.millisToPosix (dayOffset -1)
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     , { reps = 20
                                       , repGoal = Just 20
                                       , timestamp = Time.millisToPosix (dayOffset -2)
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = Time.millisToPosix 0
@@ -299,11 +312,13 @@ suite =
                                       , repGoal = Just 15
                                       , timestamp = Time.millisToPosix (dayOffset -1)
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     , { reps = 12
                                       , repGoal = Just 15
                                       , timestamp = Time.millisToPosix (dayOffset -2)
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = Time.millisToPosix 0
@@ -324,6 +339,7 @@ suite =
                                       , repGoal = Just 100
                                       , timestamp = Time.millisToPosix (dayOffset -30)
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = Time.millisToPosix 0
@@ -342,6 +358,7 @@ suite =
                                       , repGoal = Just 50
                                       , timestamp = Time.millisToPosix (dayOffset -100)
                                       , burpee = defaultBurpee
+                                      , sessionType = Nothing
                                       }
                                     ]
                                 , currentTime = Time.millisToPosix 0
