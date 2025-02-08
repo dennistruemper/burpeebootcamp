@@ -470,6 +470,15 @@ viewCalendar workouts model =
             [ div [ class "flex flex-col gap-2" ]
                 [ h2 [ class "flex-auto text-sm font-semibold text-amber-900" ]
                     [ text ("Last " ++ String.fromInt model.daysToShow ++ " Days") ]
+                , div [ class "text-sm text-amber-700" ]
+                    [ text
+                        (visibleWorkouts
+                            |> List.map .totalReps
+                            |> List.sum
+                            |> String.fromInt
+                            |> (\total -> "Total: " ++ total ++ " reps")
+                        )
+                    ]
                 , if showSlider then
                     div [ class "flex items-center gap-2 text-xs text-amber-800" ]
                         [ span [] [ text "40" ]
