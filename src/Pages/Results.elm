@@ -494,10 +494,27 @@ viewCalendar workouts model =
                 |> groupByMonth
                 |> List.map
                     (\( month, dates ) ->
+                        let
+                            monthlyTotal : Int
+                            monthlyTotal =
+                                dates
+                                    |> List.filterMap
+                                        (\date ->
+                                            if date.isDummy then
+                                                Nothing
+
+                                            else
+                                                getWorkout date.time
+                                                    |> Maybe.map .totalReps
+                                        )
+                                    |> List.sum
+                        in
                         div [ class "mt-4" ]
-                            [ div [ class "px-4 py-2" ]
+                            [ div [ class "px-4 py-2 flex justify-between items-center" ]
                                 [ h3 [ class "text-sm font-medium text-amber-800" ]
                                     [ text (monthToString month) ]
+                                , div [ class "text-sm text-amber-600" ]
+                                    [ text (String.fromInt monthlyTotal ++ " reps") ]
                                 ]
                             , div [ class "mt-2 grid grid-cols-7 text-center text-xs leading-6 text-amber-500" ]
                                 (List.map (\day -> div [] [ text day ]) ([ "M", "T", "W", "T", "F", "S", "S" ] |> List.reverse))
