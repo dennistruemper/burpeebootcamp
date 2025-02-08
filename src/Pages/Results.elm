@@ -174,19 +174,17 @@ viewCalendar workouts model =
                 -- Add padding days based on weekday of last day of month
                 addPaddingDays : List { time : Time.Posix, isDummy : Bool } -> List { time : Time.Posix, isDummy : Bool }
                 addPaddingDays dates_ =
-                    case List.head (List.reverse dates_) of
-                        Nothing ->
-                            []
-
-                        Just lastDate ->
+                    case ( List.head dates_, List.head (List.reverse dates_) ) of
+                        ( Just firstDate, Just lastDate ) ->
                             let
-                                weekday : Time.Weekday
-                                weekday =
-                                    Time.toWeekday Time.utc lastDate.time
+                                -- Calculate padding needed at start of month
+                                startWeekday : Time.Weekday
+                                startWeekday =
+                                    Time.toWeekday Time.utc firstDate.time
 
-                                paddingCount : Int
-                                paddingCount =
-                                    case weekday of
+                                startPaddingCount : Int
+                                startPaddingCount =
+                                    case startWeekday of
                                         Time.Mon ->
                                             6
 
@@ -208,17 +206,47 @@ viewCalendar workouts model =
                                         Time.Sun ->
                                             0
 
-                                -- Create dummy dates for padding
-                                oneMonthInMillis : Int
-                                oneMonthInMillis =
-                                    1000 * 60 * 60 * 24 * 30
+                                -- Calculate padding needed at end of month
+                                endWeekday : Time.Weekday
+                                endWeekday =
+                                    Time.toWeekday Time.utc lastDate.time
 
-                                paddingDates : List { time : Time.Posix, isDummy : Bool }
-                                paddingDates =
-                                    List.range 1 paddingCount
-                                        |> List.map (\_ -> { time = Time.millisToPosix (Time.posixToMillis lastDate.time + oneMonthInMillis), isDummy = True })
+                                endPaddingCount : Int
+                                endPaddingCount =
+                                    case endWeekday of
+                                        Time.Mon ->
+                                            6
+
+                                        Time.Tue ->
+                                            5
+
+                                        Time.Wed ->
+                                            4
+
+                                        Time.Thu ->
+                                            3
+
+                                        Time.Fri ->
+                                            2
+
+                                        Time.Sat ->
+                                            1
+
+                                        Time.Sun ->
+                                            0
+
+                                -- Create empty padding dates for start (using lastDate as reference)
+                                startPaddingDates : List { time : Time.Posix, isDummy : Bool }
+                                startPaddingDates =
+                                    List.range
+                                        1
+                                        (Debug.log "startPaddingCount" startPaddingCount)
+                                        |> List.map (\_ -> { time = lastDate.time, isDummy = True })
                             in
-                            paddingDates ++ dates_
+                            startPaddingDates ++ dates_
+
+                        _ ->
+                            dates_
 
                 -- Helper to get a sortable value for a month/year combination
             in
@@ -472,7 +500,7 @@ viewCalendar workouts model =
                                     [ text (monthToString month) ]
                                 ]
                             , div [ class "mt-2 grid grid-cols-7 text-center text-xs leading-6 text-amber-500" ]
-                                (List.map (\day -> div [] [ text day ]) [ "M", "T", "W", "T", "F", "S", "S" ])
+                                (List.map (\day -> div [] [ text day ]) ([ "M", "T", "W", "T", "F", "S", "S" ] |> List.reverse))
                             , div [ class "mt-2 grid grid-cols-7 gap-1 p-2" ]
                                 (dates
                                     |> List.map
