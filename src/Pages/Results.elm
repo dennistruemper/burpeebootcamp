@@ -207,40 +207,12 @@ viewCalendar workouts model =
                                             0
 
                                 -- Calculate padding needed at end of month
-                                endWeekday : Time.Weekday
-                                endWeekday =
-                                    Time.toWeekday Time.utc lastDate.time
-
-                                endPaddingCount : Int
-                                endPaddingCount =
-                                    case endWeekday of
-                                        Time.Mon ->
-                                            6
-
-                                        Time.Tue ->
-                                            5
-
-                                        Time.Wed ->
-                                            4
-
-                                        Time.Thu ->
-                                            3
-
-                                        Time.Fri ->
-                                            2
-
-                                        Time.Sat ->
-                                            1
-
-                                        Time.Sun ->
-                                            0
-
                                 -- Create empty padding dates for start (using lastDate as reference)
                                 startPaddingDates : List { time : Time.Posix, isDummy : Bool }
                                 startPaddingDates =
                                     List.range
                                         1
-                                        (Debug.log "startPaddingCount" startPaddingCount)
+                                        startPaddingCount
                                         |> List.map (\_ -> { time = lastDate.time, isDummy = True })
                             in
                             startPaddingDates ++ dates_
