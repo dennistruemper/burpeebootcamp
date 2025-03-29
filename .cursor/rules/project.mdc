@@ -1,0 +1,44 @@
+---
+description: Project specific high level information
+globs: **
+---
+# BurpeeBootcamp - Progressive Web App
+
+## Project Overview
+A PWA for tracking burpee training with a unique nose-to-screen counting mechanism.
+
+## Core Concepts
+- **Session Types**
+  - Regular Session: Standard training at user's pace
+  - Workout: Intensive session aimed at exhaustion
+  - EMOM: Every Minute On the Minute training
+  - AMRAP: As Many Reps As Possible in time limit
+
+## Training Features
+- Nose-to-screen rep counting
+- Progressive overload system
+- Multiple burpee variations
+- Daily goals and tracking
+- Offline-first functionality
+
+## Data Management
+- Local-first approach using indexedDB
+- Event sourcing for tracking progress
+- No server sync (planned for future)
+
+## Quality Assurance
+- Business logic requires unit tests
+- Review rules enforced via elm-review
+- Visual testing for UI components
+
+## Technical Requirements
+- Full offline capability
+- PWA installation support
+- Mobile-responsive design
+- Touch-optimized interface
+
+## User Experience Goals
+- Simple, intuitive interface
+- Quick session/workout entry
+- Clear progress visualization
+- Seamless offline experience

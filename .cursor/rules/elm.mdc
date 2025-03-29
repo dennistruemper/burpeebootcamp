@@ -1,0 +1,44 @@
+---
+description: The elm specifics of this project
+globs: *.elm, interop.js
+---
+# Elm specifics of this project
+
+## Technology Stack
+- We use Lamdera for full-stack Elm development
+- Elm-land for project structure and routing
+
+## UI Component Guidelines
+- UI components are pure functions, not stateful components
+- State is managed at the page/application level, not in components
+- We use the wither-pattern for UI components
+  Example:
+  ```elm
+  viewButton : ButtonConfig -> Html Msg
+  viewButton config =
+      config
+          |> withDefaultStyles
+          |> withCustomClasses
+          |> renderButton
+  ```
+
+## Project Structure
+- Common UI components live in src/Components/
+- Components should be pure functions
+- Each component should have a clear, single responsibility
+
+## Best Practices
+- Keep UI components small and focused
+- Use type aliases for component configurations
+- Document public functions and types
+
+## Testing
+- Unit tests for business logic
+- UI components should be simple enough to verify visually
+
+## Architecture
+- For persistent data we indexedDB in interop.js
+- We want to be full offline compatible, so everything which can be done on the client should be done there
+  - Data will be kept on user device in indexedDB
+  - no sync of data (might change in future)
+- Routing is handled by Elm-land
