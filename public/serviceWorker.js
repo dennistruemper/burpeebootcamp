@@ -1,4 +1,4 @@
-const version = "v18";
+const version = "v19";
 const cacheName = `cache-${version}`;
 const assets = [
   "/",
