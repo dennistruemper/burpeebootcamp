@@ -944,6 +944,11 @@ viewEMOMStatus shared model settings =
                 }
                 model.overwriteRepGoal
 
+        -- Add total goal reached check
+        isGoalReached : Bool
+        isGoalReached =
+            model.currentReps >= repGoal
+
         roundDisplay : String
         roundDisplay =
             case settings.status of
@@ -954,25 +959,56 @@ viewEMOMStatus shared model settings =
                     "Practice Failed! 😢"
 
                 _ ->
-                    "Round " ++ String.fromInt settings.currentRound ++ " / " ++ String.fromInt settings.totalRounds
+                    if isGoalReached then
+                        "Goal Reached! 🎉"
 
+                    else
+                        "Round " ++ String.fromInt settings.currentRound ++ " / " ++ String.fromInt settings.totalRounds
+
+        -- Calculate reps in current round only
+        repsInCurrentRound : Int
+        repsInCurrentRound =
+            model.currentReps - (settings.currentRound - 1) * settings.repsPerMinute
+
+        -- Update current round goal to consider total goal
         currentRoundGoal : Int
         currentRoundGoal =
-            min (settings.repsPerMinute * settings.currentRound) repGoal
+            if settings.currentRound == settings.totalRounds then
+                -- For the last round, use remaining reps to reach total goal
+                min settings.repsPerMinute (repGoal - ((settings.currentRound - 1) * settings.repsPerMinute))
+
+            else
+                -- For all other rounds, use consistent reps per minute
+                min settings.repsPerMinute (repGoal - ((settings.currentRound - 1) * settings.repsPerMinute))
     in
-    div [ class "absolute top-4 right-4 bg-amber-100 p-4 rounded-lg shadow-md min-w-[200px]" ]
-        [ div [ class "text-2xl font-bold text-amber-900 flex justify-between items-center" ]
-            [ text roundDisplay
-            ]
-        , div [ class "text-xl text-amber-800 mt-2" ]
-            [ text <| String.fromInt model.currentReps ++ " / " ++ String.fromInt currentRoundGoal ++ " reps" ]
-        , div [ class "w-full bg-amber-200 rounded-full h-2 mt-2" ]
-            [ div
-                [ class "bg-amber-600 h-2 rounded-full transition-all duration-200"
-                , style "width" (String.fromFloat (remainingTimePercent timeRemaining) ++ "%")
-                , classList [ ( "bg-red-600", isLastTenSeconds ) ]
+    div [ class "flex flex-col items-center gap-6" ]
+        [ div [ class "text-2xl font-bold text-amber-900" ]
+            [ text roundDisplay ]
+        , div [ class "flex flex-col items-center" ]
+            [ div [ class "flex items-baseline font-mono" ]
+                [ div [ class "text-xl text-amber-800 mr-2" ]
+                    [ text "⏱️" ]
+                , div [ class "text-4xl font-bold text-amber-900" ]
+                    [ text (String.fromInt timeRemaining) ]
+                , div [ class "text-xl text-amber-800 ml-1" ]
+                    [ text "sec" ]
                 ]
-                []
+            , div [ class "w-64 bg-amber-200 rounded-full h-2 mt-2" ]
+                [ div
+                    [ class "h-full rounded-full transition-all duration-200"
+                    , classList [ ( "bg-red-600", isLastTenSeconds ), ( "bg-amber-600", not isLastTenSeconds ) ]
+                    , style "width" (String.fromFloat (remainingTimePercent timeRemaining) ++ "%")
+                    ]
+                    []
+                ]
+            ]
+        , div [ class "text-center" ]
+            [ div [ class "text-6xl font-bold text-amber-900" ]
+                [ text (String.fromInt repsInCurrentRound) ]
+
+            -- Show current round reps
+            , div [ class "text-xl text-amber-800" ]
+                [ text <| String.fromInt currentRoundGoal ++ " reps goal" ]
             ]
         , viewEMOMStats model settings currentRoundGoal
         ]
@@ -980,15 +1016,50 @@ viewEMOMStatus shared model settings =
 
 viewEMOMStats : Model -> EMOMSettings -> Int -> Html Msg
 viewEMOMStats model settings currentRoundGoal =
-    div [ class "mt-4 text-sm text-amber-800" ]
-        [ div [ class "flex justify-between" ]
-            [ text "Average reps/round:"
-            , text (String.fromFloat (toFloat (round (toFloat model.currentReps / toFloat settings.currentRound * 10)) / 10))
+    let
+        repsInCurrentRound : Int
+        repsInCurrentRound =
+            model.currentReps - (settings.currentRound - 1) * settings.repsPerMinute
+
+        elapsedInRound : Int
+        elapsedInRound =
+            modBy 60000 (Time.posixToMillis settings.currentTickTime - Time.posixToMillis settings.startTime)
+
+        targetTimePerRep : Float
+        targetTimePerRep =
+            60000 / toFloat settings.repsPerMinute
+
+        isAheadOfPace : Bool
+        isAheadOfPace =
+            if repsInCurrentRound == 0 then
+                False
+
+            else
+                toFloat elapsedInRound < (toFloat repsInCurrentRound * targetTimePerRep)
+
+        paceMessage : String
+        paceMessage =
+            if repsInCurrentRound >= settings.repsPerMinute then
+                "Round Complete! 🎉"
+
+            else if isAheadOfPace then
+                "Great Pace! 💪"
+
+            else
+                "Keep Pushing! 🔥"
+    in
+    div [ class "text-center" ]
+        [ div
+            [ class "text-lg font-bold transition-colors"
+            , classList
+                [ ( "text-green-600", isAheadOfPace )
+                , ( "text-amber-600", not isAheadOfPace && repsInCurrentRound > 0 )
+                , ( "text-amber-800", repsInCurrentRound == 0 )
+                ]
             ]
-        , div [ class "flex justify-between" ]
-            [ text "Completion rate:"
-            , text (String.fromInt (round (toFloat model.currentReps / toFloat currentRoundGoal * 100)) ++ "%")
-            ]
+            [ text paceMessage ]
+        , div [ class "text-sm mt-2 text-amber-800" ]
+            [ text <| "Round " ++ String.fromInt settings.currentRound ++ " of " ++ String.fromInt settings.totalRounds ]
         ]
 
 
