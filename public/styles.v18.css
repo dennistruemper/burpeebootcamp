@@ -882,6 +882,9 @@
   .gap-2 {
     gap: calc(var(--spacing) * 2);
   }
+  .gap-3 {
+    gap: calc(var(--spacing) * 3);
+  }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
   }
@@ -959,6 +962,9 @@
   }
   .border-amber-200 {
     border-color: var(--color-amber-200);
+  }
+  .border-amber-300 {
+    border-color: var(--color-amber-300);
   }
   .border-amber-600 {
     border-color: var(--color-amber-600);
@@ -1168,6 +1174,9 @@
   }
   .text-amber-700 {
     color: var(--color-amber-700);
+  }
+  .text-amber-700\/70 {
+    color: color-mix(in oklab, var(--color-amber-700) 70%, transparent);
   }
   .text-amber-800 {
     color: var(--color-amber-800);
@@ -1386,6 +1395,11 @@
         --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
         box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
       }
+    }
+  }
+  .focus\:ring-amber-500 {
+    &:focus {
+      --tw-ring-color: var(--color-amber-500);
     }
   }
   .active\:bg-amber-800\/30 {
