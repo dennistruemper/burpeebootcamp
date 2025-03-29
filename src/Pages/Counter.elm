@@ -1,6 +1,7 @@
 module Pages.Counter exposing
     ( AMRAPSettings
-    , AMRAPStatus
+    , AMRAPStatus(..)
+    , EMOMMode(..)
     , EMOMSettings
     , EMOMStatus(..)
     , Model
