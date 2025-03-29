@@ -127,14 +127,14 @@ view shared model =
                         ]
                         [ text "Menu" ]
                     ]
-                , viewCalendar shared.workoutHistory model
+                , viewCalendar shared.workoutHistory model shared
                 ]
             ]
     }
 
 
-viewCalendar : List WorkoutResult -> Model -> Html Msg
-viewCalendar workouts model =
+viewCalendar : List WorkoutResult -> Model -> Shared.Model -> Html Msg
+viewCalendar workouts model shared =
     let
         -- Helper to create a unique key for each month
         monthKey : Int -> Time.Month -> String
@@ -377,8 +377,8 @@ viewCalendar workouts model =
             maxDaysToShow
                 /= 40
 
-        viewDay : Time.Posix -> Bool -> Html Msg
-        viewDay date isDummy =
+        viewDay : Time.Zone -> Time.Posix -> Bool -> Html Msg
+        viewDay zone date isDummy =
             if isDummy then
                 -- Render empty padding cell
                 div [ class "aspect-square" ]
@@ -423,7 +423,7 @@ viewCalendar workouts model =
                                     [ text ("(" ++ String.fromInt w.totalReps ++ ", " ++ String.fromInt w.sessionCount ++ ")") ]
                                 ]
                             , if model.popoverDay |> Maybe.map (isSameDay date) |> Maybe.withDefault False then
-                                viewPopover w
+                                viewPopover zone w
 
                               else
                                 text ""
@@ -503,7 +503,7 @@ viewCalendar workouts model =
                                 (dates
                                     |> List.map
                                         (\date ->
-                                            viewDay date.time date.isDummy
+                                            viewDay shared.timeZone date.time date.isDummy
                                         )
                                 )
                             ]
@@ -522,8 +522,8 @@ isSameDay date1 date2 =
         == Time.toYear Time.utc date2
 
 
-viewPopover : DayStats -> Html Msg
-viewPopover dayStats =
+viewPopover : Time.Zone -> DayStats -> Html Msg
+viewPopover zone dayStats =
     div
         [ class """
             fixed inset-0 z-50
@@ -586,7 +586,7 @@ viewPopover dayStats =
                                 div [ class "flex flex-col p-3 bg-amber-50 rounded-lg" ]
                                     [ div [ class "flex items-center justify-between" ]
                                         [ div [ class "text-amber-800" ]
-                                            [ text (formatTime session.timestamp) ]
+                                            [ text (formatTime zone session.timestamp) ]
                                         , case session.repGoal of
                                             Just goal ->
                                                 let
@@ -743,17 +743,17 @@ type alias DayStats =
     }
 
 
-formatTime : Time.Posix -> String
-formatTime time =
+formatTime : Time.Zone -> Time.Posix -> String
+formatTime zone time =
     let
         hour : String
         hour =
-            String.fromInt (Time.toHour Time.utc time)
+            String.fromInt (Time.toHour zone time)
                 |> String.padLeft 2 '0'
 
         minute : String
         minute =
-            String.fromInt (Time.toMinute Time.utc time)
+            String.fromInt (Time.toMinute zone time)
                 |> String.padLeft 2 '0'
     in
     hour ++ ":" ++ minute
