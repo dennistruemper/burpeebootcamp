@@ -31,6 +31,7 @@ globs: *.elm, interop.js
 - Keep UI components small and focused
 - Use type aliases for component configurations
 - Document public functions and types
+- allway add type signatures
 
 ## Testing
 - Unit tests for business logic

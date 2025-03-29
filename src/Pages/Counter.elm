@@ -290,21 +290,27 @@ update shared msg model =
 
                     else
                         let
+                            elapsedTime : Int
                             elapsedTime =
                                 Time.posixToMillis newTime - Time.posixToMillis settings.startTime
 
+                            currentMinute : Int
                             currentMinute =
                                 elapsedTime // 60000
 
+                            isNewMinute : Bool
                             isNewMinute =
                                 currentMinute + 1 > settings.currentRound
 
+                            repsInCurrentRound : Int
                             repsInCurrentRound =
                                 model.currentReps - (settings.currentRound - 1) * settings.repsPerMinute
 
+                            isFailed : Bool
                             isFailed =
                                 isNewMinute && repsInCurrentRound < settings.repsPerMinute
 
+                            isComplete : Bool
                             isComplete =
                                 case settings.mode of
                                     FixedRounds ->
@@ -313,6 +319,7 @@ update shared msg model =
                                     EndlessMode ->
                                         False
 
+                            newSettings : EMOMSettings
                             newSettings =
                                 if isFailed && settings.mode == EndlessMode then
                                     { settings | status = Failed, currentTickTime = newTime }
@@ -867,9 +874,11 @@ viewEMOMConfig repGoal settings =
                         , onInput
                             (\str ->
                                 let
+                                    newRepsPerMinute : Int
                                     newRepsPerMinute =
                                         Maybe.withDefault settings.repsPerMinute (String.toInt str)
 
+                                    newTotalRounds : Int
                                     newTotalRounds =
                                         if settings.mode == FixedRounds then
                                             ceiling (toFloat repGoal / toFloat newRepsPerMinute)
@@ -958,10 +967,6 @@ viewEMOMStatus shared model settings =
                 model.overwriteRepGoal
 
         -- Add total goal reached check
-        isGoalReached : Bool
-        isGoalReached =
-            model.currentReps >= repGoal
-
         roundDisplay : String
         roundDisplay =
             case settings.status of
@@ -972,6 +977,11 @@ viewEMOMStatus shared model settings =
                     "Practice Failed! 😢"
 
                 _ ->
+                    let
+                        isGoalReached : Bool
+                        isGoalReached =
+                            model.currentReps >= repGoal
+                    in
                     if isGoalReached then
                         "Goal Reached! 🎉"
 
@@ -984,15 +994,6 @@ viewEMOMStatus shared model settings =
             model.currentReps - (settings.currentRound - 1) * settings.repsPerMinute
 
         -- Update current round goal to consider total goal
-        currentRoundGoal : Int
-        currentRoundGoal =
-            if settings.currentRound == settings.currentRound then
-                -- For the last round, use remaining reps to reach total goal
-                min settings.repsPerMinute (repGoal - ((settings.currentRound - 1) * settings.repsPerMinute))
-
-            else
-                -- For all other rounds, use consistent reps per minute
-                min settings.repsPerMinute (repGoal - ((settings.currentRound - 1) * settings.repsPerMinute))
     in
     div [ class "flex flex-col items-center gap-6" ]
         [ div [ class "text-2xl font-bold text-amber-900" ]
@@ -1024,27 +1025,24 @@ viewEMOMStatus shared model settings =
                 text ""
 
               else
+                let
+                    currentRoundGoal : Int
+                    currentRoundGoal =
+                        min settings.repsPerMinute (repGoal - ((settings.currentRound - 1) * settings.repsPerMinute))
+                in
                 div [ class "text-xl text-amber-800" ]
                     [ text <| String.fromInt currentRoundGoal ++ " reps goal" ]
             ]
-        , viewEMOMStats model settings currentRoundGoal
+        , viewEMOMStats model settings
         ]
 
 
-viewEMOMStats : Model -> EMOMSettings -> Int -> Html Msg
-viewEMOMStats model settings currentRoundGoal =
+viewEMOMStats : Model -> EMOMSettings -> Html Msg
+viewEMOMStats model settings =
     let
         repsInCurrentRound : Int
         repsInCurrentRound =
             model.currentReps - (settings.currentRound - 1) * settings.repsPerMinute
-
-        elapsedInRound : Int
-        elapsedInRound =
-            modBy 60000 (Time.posixToMillis settings.currentTickTime - Time.posixToMillis settings.startTime)
-
-        targetTimePerRep : Float
-        targetTimePerRep =
-            60000 / toFloat settings.repsPerMinute
 
         isAheadOfPace : Bool
         isAheadOfPace =
@@ -1052,6 +1050,15 @@ viewEMOMStats model settings currentRoundGoal =
                 False
 
             else
+                let
+                    elapsedInRound : Int
+                    elapsedInRound =
+                        modBy 60000 (Time.posixToMillis settings.currentTickTime - Time.posixToMillis settings.startTime)
+
+                    targetTimePerRep : Float
+                    targetTimePerRep =
+                        60000 / toFloat settings.repsPerMinute
+                in
                 toFloat elapsedInRound < (toFloat repsInCurrentRound * targetTimePerRep)
 
         paceMessage : String
