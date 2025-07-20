@@ -91,7 +91,6 @@ type alias AMRAPSettings =
 
 type Msg
     = IncrementReps
-    | ResetCounter
     | GotWorkoutFinishedTime Time.Posix
     | GetWorkoutFinishedTime
     | ChangeToMenu
@@ -109,7 +108,8 @@ type Msg
     | AMRAPTick Time.Posix
     | ToggleHelpModal
     | CloseHelpModal
-    | ToggleSound -- Add this new message
+    | ToggleSound
+    | PlayTimerWarning
 
 
 type alias Model =
@@ -122,7 +122,8 @@ type alias Model =
     , redirectTime : Maybe Time.Posix
     , isDebouncing : Bool
     , showHelpModal : Bool
-    , soundEnabled : Bool -- Add this field
+    , soundEnabled : Bool
+    , lastWarningTime : Maybe Time.Posix -- Add this to track when we last played warning
     }
 
 
@@ -137,7 +138,8 @@ init shared route _ =
       , redirectTime = Nothing
       , isDebouncing = False
       , showHelpModal = False
-      , soundEnabled = True -- Initialize soundEnabled
+      , soundEnabled = True
+      , lastWarningTime = Nothing -- Initialize warning time
       }
     , Effect.none
     )
@@ -165,15 +167,6 @@ update shared msg model =
 
                     _ ->
                         incrementReps shared model
-
-        ResetCounter ->
-            ( { model
-                | currentReps = 0
-                , groundTouchesForCurrentRep = 0
-                , redirectTime = Nothing
-              }
-            , Effect.none
-            )
 
         GetWorkoutFinishedTime ->
             ( model
@@ -323,6 +316,11 @@ update shared msg model =
                                     EndlessMode ->
                                         False
 
+                            -- Use the reusable helper function
+                            shouldPlayWarning : Bool
+                            shouldPlayWarning =
+                                shouldPlayTimerWarning model settings newTime
+
                             newSettings : EMOMSettings
                             newSettings =
                                 if isFailed && settings.mode == EndlessMode then
@@ -340,9 +338,23 @@ update shared msg model =
                                 else
                                     { settings | currentTickTime = newTime }
                         in
-                        ( { model | sessionMode = Just (EMOM newSettings) }
+                        ( { model
+                            | sessionMode = Just (EMOM newSettings)
+                            , lastWarningTime =
+                                if shouldPlayWarning then
+                                    Just newTime
+
+                                else
+                                    model.lastWarningTime
+                          }
                         , if isFailed || isComplete then
-                            Effect.getTime GotWorkoutFinishedTime
+                            Effect.batch
+                                [ Effect.getTime GotWorkoutFinishedTime
+                                , Effect.playSound Sound.WorkoutComplete
+                                ]
+
+                          else if shouldPlayWarning then
+                            Effect.playSound Sound.TimerWarning
 
                           else
                             Effect.none
@@ -496,6 +508,15 @@ update shared msg model =
             , Effect.none
             )
 
+        PlayTimerWarning ->
+            ( { model | lastWarningTime = Just shared.currentTime }
+            , if model.soundEnabled then
+                Effect.playSound Sound.TimerWarning
+
+              else
+                Effect.none
+            )
+
 
 
 -- SUBSCRIPTIONS
@@ -636,13 +657,8 @@ view shared model =
                             [ text "Show actions" ]
                         , div [ class "mt-2 space-y-2" ]
                             [ div [ class "flex gap-2" ]
-                                -- Top row: Reset and Menu
+                                -- Top row: Menu only (removed Reset Counter)
                                 [ button
-                                    [ class "flex-1 px-4 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
-                                    , onClick ResetCounter
-                                    ]
-                                    [ text "Reset Counter" ]
-                                , button
                                     [ class "flex-1 px-4 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
                                     , onClick ChangeToMenu
                                     ]
@@ -1021,6 +1037,11 @@ viewEMOMStatus shared model settings =
         repsInCurrentRound =
             model.currentReps - (settings.currentRound - 1) * settings.repsPerMinute
 
+        -- Use the reusable helper function
+        shouldPlayWarning : Bool
+        shouldPlayWarning =
+            shouldPlayTimerWarning model settings settings.currentTickTime
+
         -- Update current round goal to consider total goal
     in
     div [ class "flex flex-col items-center gap-6" ]
@@ -1062,6 +1083,16 @@ viewEMOMStatus shared model settings =
                     [ text <| String.fromInt currentRoundGoal ++ " reps goal" ]
             ]
         , viewEMOMStats model settings
+        , if shouldPlayWarning then
+            div [ style "display" "none" ]
+                -- Hidden element to trigger effect
+                [ Html.node "script"
+                    [ Html.Attributes.attribute "type" "text/javascript" ]
+                    [ Html.text "setTimeout(() => window.elmApp.ports.toJs.send(JSON.stringify({tag: 'PlaySound', data: 'timer-warning.mp3'})), 0);" ]
+                ]
+
+          else
+            text ""
         ]
 
 
@@ -1074,21 +1105,9 @@ viewEMOMStats model settings =
 
         isAheadOfPace : Bool
         isAheadOfPace =
-            if repsInCurrentRound == 0 then
-                False
+            not (isBehindPace model settings)
 
-            else
-                let
-                    elapsedInRound : Int
-                    elapsedInRound =
-                        modBy 60000 (Time.posixToMillis settings.currentTickTime - Time.posixToMillis settings.startTime)
-
-                    targetTimePerRep : Float
-                    targetTimePerRep =
-                        60000 / toFloat settings.repsPerMinute
-                in
-                toFloat elapsedInRound < (toFloat repsInCurrentRound * targetTimePerRep)
-
+        -- Use the reusable helper
         paceMessage : String
         paceMessage =
             if repsInCurrentRound >= settings.repsPerMinute then
@@ -1099,6 +1118,11 @@ viewEMOMStats model settings =
 
             else
                 "Keep Pushing! 🔥"
+
+        -- Use the reusable helper function
+        shouldPlayWarning : Bool
+        shouldPlayWarning =
+            shouldPlayTimerWarning model settings settings.currentTickTime
     in
     div [ class "text-center" ]
         [ div
@@ -1116,6 +1140,16 @@ viewEMOMStats model settings =
           else
             div [ class "text-sm mt-2 text-amber-800" ]
                 [ text <| "Round " ++ String.fromInt settings.currentRound ++ " of " ++ String.fromInt settings.currentRound ]
+        , if shouldPlayWarning then
+            div [ style "display" "none" ]
+                -- Hidden element to trigger effect
+                [ Html.node "script"
+                    [ Html.Attributes.attribute "type" "text/javascript" ]
+                    [ Html.text "setTimeout(() => window.elmApp.ports.toJs.send(JSON.stringify({tag: 'PlaySound', data: 'timer-warning.mp3'})), 0);" ]
+                ]
+
+          else
+            text ""
         ]
 
 
@@ -1471,3 +1505,48 @@ viewHelpModal =
                 ]
             ]
         ]
+
+
+
+-- Add this new helper function
+
+
+isBehindPace : Model -> EMOMSettings -> Bool
+isBehindPace model settings =
+    let
+        repsInCurrentRound : Int
+        repsInCurrentRound =
+            model.currentReps - (settings.currentRound - 1) * settings.repsPerMinute
+    in
+    if repsInCurrentRound == 0 then
+        False
+
+    else
+        let
+            elapsedInRound : Int
+            elapsedInRound =
+                modBy 60000 (Time.posixToMillis settings.currentTickTime - Time.posixToMillis settings.startTime)
+
+            targetTimePerRep : Float
+            targetTimePerRep =
+                60000 / toFloat settings.repsPerMinute
+        in
+        toFloat elapsedInRound >= (toFloat repsInCurrentRound * targetTimePerRep)
+
+
+shouldPlayTimerWarning : Model -> EMOMSettings -> Time.Posix -> Bool
+shouldPlayTimerWarning model settings currentTime =
+    isBehindPace model settings
+        && model.currentReps
+        > 0
+        -- Only if user has started counting
+        && (model.lastWarningTime
+                == Nothing
+                || Time.posixToMillis currentTime
+                - Time.posixToMillis (Maybe.withDefault (Time.millisToPosix 0) model.lastWarningTime)
+                > 2000
+           )
+
+
+
+-- Play every 2 seconds
