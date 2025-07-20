@@ -13,8 +13,26 @@ const sounds = {};
 
 // Initialize audio context on first user interaction
 function initAudio() {
+  console.log("Initializing audio...");
+
   if (!audioContext) {
+    console.log("Creating new audio context");
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  console.log("Audio context state:", audioContext.state);
+
+  // iOS requires the audio context to be resumed after user interaction
+  if (audioContext.state === "suspended") {
+    console.log("Resuming suspended audio context");
+    audioContext
+      .resume()
+      .then(() => {
+        console.log("Audio context resumed successfully");
+      })
+      .catch((error) => {
+        console.error("Failed to resume audio context:", error);
+      });
   }
 }
 
@@ -37,16 +55,55 @@ async function loadSound(filename) {
   }
 }
 
-// Play a sound
+// Play a sound with better debugging
 async function playSound(filename) {
-  initAudio();
+  console.log("Attempting to play sound:", filename);
 
-  const audioBuffer = await loadSound(filename);
-  if (audioBuffer) {
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
-    source.start(0);
+  try {
+    initAudio();
+    console.log("Audio context state:", audioContext.state);
+
+    const audioBuffer = await loadSound(filename);
+    if (audioBuffer) {
+      console.log("Audio buffer loaded successfully");
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      source.start(0);
+      console.log("Sound started successfully");
+    } else {
+      console.warn("Failed to load audio buffer for:", filename);
+    }
+  } catch (error) {
+    console.error("Web Audio API failed, falling back to HTML5 Audio:", error);
+    playSoundHTML5(filename);
+  }
+}
+
+// Fallback to HTML5 Audio with iOS-specific handling
+function playSoundHTML5(filename) {
+  console.log("Using HTML5 Audio fallback for:", filename);
+  const audio = new Audio(`/sounds/${filename}`);
+
+  // iOS has volume restrictions
+  audio.volume = 0.3; // Lower volume for iOS
+  audio.preload = "auto"; // Preload the audio
+
+  // iOS requires user interaction, so we need to handle this carefully
+  const playPromise = audio.play();
+
+  if (playPromise !== undefined) {
+    playPromise
+      .then(() => {
+        console.log("HTML5 Audio played successfully");
+      })
+      .catch((error) => {
+        console.error("HTML5 Audio failed:", error);
+        // Try to resume audio context if it's suspended
+        if (audioContext && audioContext.state === "suspended") {
+          audioContext.resume();
+        }
+      });
   }
 }
 
@@ -80,7 +137,7 @@ exports.init = async function (app) {
   }
 
   app.ports[TO_JS_PORT].subscribe(async function (event) {
-    console.log("fromElm", event);
+    console.log("fromElm", JSON.stringify(event));
 
     if (event.tag === undefined || event.tag === null) {
       console.error("fromElm event is missing a tag", event);
