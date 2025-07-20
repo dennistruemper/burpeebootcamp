@@ -2,7 +2,7 @@
 port supermario_copy_to_clipboard_to_js : String -> Cmd msg
 */
 
-const version = "v20";
+const version = "v21";
 const TO_JS_PORT = "toJs";
 const TO_ELM_PORT = "toElm";
 const SERVICE_WORKER_PATH = "/serviceWorker.js";
