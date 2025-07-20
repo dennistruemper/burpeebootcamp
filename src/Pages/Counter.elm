@@ -1,7 +1,5 @@
 module Pages.Counter exposing
-    ( AMRAPSettings
-    , AMRAPStatus(..)
-    , Model
+    ( Model
     , Msg(..)
     , SessionMode(..)
     , page
@@ -15,6 +13,7 @@ import Html exposing (Html, br, button, details, div, h1, h3, h4, img, input, la
 import Html.Attributes exposing (alt, checked, class, classList, src, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Page exposing (Page)
+import Pages.Counter.AMRAP as AMRAP
 import Pages.Counter.EMOM as EMOM
 import Route exposing (Route)
 import Route.Path
@@ -44,28 +43,12 @@ type SessionMode
     = Free
     | EMOM EMOM.EMOMSettings
     | Workout { totalGoal : Int }
-    | AMRAP AMRAPSettings
-
-
-type AMRAPStatus
-    = NotStarted
-    | Running
-    | Finished
+    | AMRAP AMRAP.AMRAPSettings
 
 
 type EMOMMode
     = FixedRounds -- Original mode with set number of rounds
     | EndlessMode -- New mode that continues until failure
-
-
-type alias AMRAPSettings =
-    { duration : Int -- in minutes
-    , startTime : Time.Posix
-    , currentTime : Time.Posix
-    , status : AMRAPStatus
-    , showSettings : Bool
-    , previousBest : Maybe Int
-    }
 
 
 type Msg
@@ -81,7 +64,7 @@ type Msg
     | EMOMStarted Time.Posix
     | EMOMTick Time.Posix
     | DebounceComplete Time.Posix
-    | ConfigureAMRAP AMRAPSettings
+    | ConfigureAMRAP AMRAP.AMRAPSettings
     | StartAMRAP
     | AMRAPStarted Time.Posix
     | AMRAPTick Time.Posix
@@ -138,7 +121,7 @@ update shared msg model =
             else
                 case model.sessionMode of
                     Just (AMRAP settings) ->
-                        if settings.status == Finished then
+                        if settings.status == AMRAP.Finished then
                             ( model, Effect.none )
 
                         else
@@ -237,17 +220,19 @@ update shared msg model =
 
                 AMRAP _ ->
                     let
+                        defaultSettings : AMRAP.AMRAPSettings
+                        defaultSettings =
+                            AMRAP.defaultSettings
+
                         previousBest : Maybe Int
                         previousBest =
-                            findBestAMRAPScore shared.workoutHistory defaultAMRAPSettings.duration
+                            findBestAMRAPScore shared.workoutHistory defaultSettings.duration
                     in
                     ( { model
                         | sessionMode =
                             Just
                                 (AMRAP
-                                    { defaultAMRAPSettings
-                                        | previousBest = previousBest
-                                    }
+                                    { defaultSettings | previousBest = previousBest }
                                 )
                       }
                     , Effect.none
@@ -393,7 +378,14 @@ update shared msg model =
             )
 
         ConfigureAMRAP settings ->
-            ( { model | sessionMode = Just (AMRAP settings) }, Effect.none )
+            case model.sessionMode of
+                Just (AMRAP currentSettings) ->
+                    -- If we're already in AMRAP mode with settings open, preserve the showSettings state
+                    ( { model | sessionMode = Just (AMRAP { settings | showSettings = currentSettings.showSettings }) }, Effect.none )
+
+                _ ->
+                    -- If we're not in AMRAP mode, start with settings open
+                    ( { model | sessionMode = Just (AMRAP { settings | showSettings = True }) }, Effect.none )
 
         StartAMRAP ->
             ( model, Effect.getTime AMRAPStarted )
@@ -407,7 +399,7 @@ update shared msg model =
                                 (AMRAP
                                     { settings
                                         | showSettings = False
-                                        , status = Running
+                                        , status = AMRAP.Running
                                         , startTime = time
                                         , currentTime = time
                                     }
@@ -425,7 +417,7 @@ update shared msg model =
                 Just (AMRAP settings) ->
                     let
                         ( remainingTime, _ ) =
-                            remainingAMRAPTime settings
+                            AMRAP.remainingTime settings
 
                         isComplete : Bool
                         isComplete =
@@ -433,7 +425,7 @@ update shared msg model =
 
                         shouldStartWaiting : Bool
                         shouldStartWaiting =
-                            isComplete && settings.status == Running
+                            isComplete && settings.status == AMRAP.Running
 
                         shouldRedirectNow : Bool
                         shouldRedirectNow =
@@ -444,13 +436,13 @@ update shared msg model =
                                 Nothing ->
                                     False
 
-                        newSettings : AMRAPSettings
+                        newSettings : AMRAP.AMRAPSettings
                         newSettings =
                             { settings
                                 | currentTime = newTime
                                 , status =
                                     if isComplete then
-                                        Finished
+                                        AMRAP.Finished
 
                                     else
                                         settings.status
@@ -501,6 +493,7 @@ update shared msg model =
 
 
 
+-- Do nothing, just stop event propagation
 -- SUBSCRIPTIONS
 
 
@@ -539,7 +532,7 @@ subscriptions model =
                         Sub.none
 
                 Just (AMRAP settings) ->
-                    if settings.status == Running || settings.status == Finished then
+                    if settings.status == AMRAP.Running || settings.status == AMRAP.Finished then
                         Time.every 100 AMRAPTick
 
                     else
@@ -554,22 +547,10 @@ subscriptions model =
 
 -- VIEW
 -- Create default EMOM settings
-
-
-defaultEMOMSettings : Int -> EMOM.EMOMSettings
-defaultEMOMSettings repGoal =
-    EMOM.defaultSettings repGoal
-
-
-defaultAMRAPSettings : AMRAPSettings
-defaultAMRAPSettings =
-    { duration = 20
-    , startTime = Time.millisToPosix 0
-    , currentTime = Time.millisToPosix 0
-    , status = NotStarted
-    , showSettings = True
-    , previousBest = Nothing
-    }
+-- Remove the local defaultEMOMSettings function since it's now in the EMOM module
+-- Remove: defaultEMOMSettings : Int -> EMOM.EMOMSettings
+-- Remove the local defaultAMRAPSettings function since it's now in the AMRAP module
+-- Remove: defaultAMRAPSettings : AMRAP.AMRAPSettings
 
 
 view : Shared.Model -> Model -> View Msg
@@ -601,7 +582,7 @@ view shared model =
                             model.currentReps >= totalGoal
 
                         Just (AMRAP settings) ->
-                            settings.status == Finished
+                            settings.status == AMRAP.Finished
 
                         _ ->
                             model.currentReps
@@ -679,7 +660,8 @@ view shared model =
                     ]
                 , div
                     (class "w-screen flex-1 flex flex-col items-center justify-start pt-8 bg-amber-100/30 cursor-pointer select-none touch-manipulation relative"
-                        :: (if isSessionStarted model then
+                        :: (if isSessionStarted model && not (hasModalOpen model) then
+                                -- Add modal check
                                 [ onClick IncrementReps ]
 
                             else
@@ -717,63 +699,10 @@ view shared model =
 
                         Just (AMRAP settings) ->
                             if settings.showSettings then
-                                viewAMRAPConfig shared settings
+                                AMRAP.viewConfig ConfigureAMRAP StartAMRAP shared settings
 
                             else
-                                let
-                                    ( timeRemaining, progress ) =
-                                        remainingAMRAPTime settings
-                                in
-                                div [ class "flex flex-col items-center gap-4" ]
-                                    [ if settings.status == Finished then
-                                        div [ class "text-4xl font-bold text-amber-900 mb-2" ]
-                                            [ text "Time's up!" ]
-
-                                      else
-                                        let
-                                            minutes : Int
-                                            minutes =
-                                                timeRemaining // 60
-
-                                            seconds : Int
-                                            seconds =
-                                                modBy 60 timeRemaining
-
-                                            timeDisplay : String
-                                            timeDisplay =
-                                                String.fromInt minutes
-                                                    ++ ":"
-                                                    ++ (if seconds < 10 then
-                                                            "0"
-
-                                                        else
-                                                            ""
-                                                       )
-                                                    ++ String.fromInt seconds
-                                        in
-                                        div [ class "text-4xl font-bold text-amber-900 mb-2" ]
-                                            [ text timeDisplay ]
-                                    , div [ class "text-6xl font-bold text-amber-900" ]
-                                        [ text (String.fromInt model.currentReps) ]
-                                    , div [ class "text-2xl text-amber-800" ]
-                                        [ text "reps" ]
-                                    , div [ class "w-64 bg-amber-200 rounded-full h-2 mt-2" ]
-                                        [ div
-                                            [ class "bg-amber-600 h-2 rounded-full transition-all duration-200"
-                                            , style "width" (String.fromInt progress ++ "%")
-                                            ]
-                                            []
-                                        ]
-                                    , case settings.previousBest of
-                                        Just best ->
-                                            div [ class "text-xl text-amber-800 mt-2" ]
-                                                [ text <| "Previous best: " ++ String.fromInt best ]
-
-                                        Nothing ->
-                                            text ""
-                                    , div [ class "text-sm text-amber-800/70 mt-4 italic text-center" ]
-                                        [ text "Keep pushing! Don't stop until time runs out!" ]
-                                    ]
+                                AMRAP.viewStatus shared { currentReps = model.currentReps } settings
 
                         _ ->
                             div
@@ -878,7 +807,14 @@ view shared model =
 
 viewEMOMConfig : Int -> EMOM.EMOMSettings -> Html Msg
 viewEMOMConfig repGoal settings =
-    EMOM.viewConfig ConfigureEMOM StartEMOM repGoal settings
+    EMOM.viewConfig ConfigureEMOM
+        StartEMOM
+        (Session.Goal.calculateNextGoal
+            { lastSessions = [], currentTime = Time.millisToPosix 0, timeZone = Time.utc }
+            (Just repGoal)
+         -- Wrap in Just to make it Maybe Int
+        )
+        settings
 
 
 viewEMOMStatus : Shared.Model -> Model -> EMOM.EMOMSettings -> Html Msg
@@ -891,117 +827,29 @@ viewEMOMStatus shared model settings =
         settings
 
 
-viewEMOMStats : Model -> EMOM.EMOMSettings -> Html Msg
-viewEMOMStats model settings =
-    EMOM.viewStats { currentReps = model.currentReps, lastWarningTime = Nothing } settings
+
+-- Remove this function since AMRAP doesn't need separate stats
+-- viewAMRAPStats : Model -> AMRAP.AMRAPSettings -> Html Msg
 
 
-viewAMRAPConfig : Shared.Model -> AMRAPSettings -> Html Msg
+viewAMRAPConfig : Shared.Model -> AMRAP.AMRAPSettings -> Html Msg
 viewAMRAPConfig shared settings =
-    let
-        hasAnyAMRAPHistory : Bool
-        hasAnyAMRAPHistory =
-            shared.workoutHistory
-                |> List.any
-                    (\workout ->
-                        case workout.sessionType of
-                            Just (WorkoutResult.StoredAMRAP _) ->
-                                True
+    AMRAP.viewConfig ConfigureAMRAP StartAMRAP shared settings
 
-                            _ ->
-                                False
-                    )
-    in
-    div [ class "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" ]
-        [ div [ class "bg-white p-6 rounded-lg shadow-xl max-w-sm mx-4" ]
-            [ h3 [ class "text-xl font-bold text-amber-900 mb-4" ]
-                [ text "Configure AMRAP Session" ]
-            , if not hasAnyAMRAPHistory then
-                div
-                    [ class """
-                        mb-4 p-3 rounded-lg
-                        bg-amber-50 border border-amber-200
-                        text-amber-800 text-sm
-                      """
-                    ]
-                    [ div [ class "font-medium mb-1" ]
-                        [ text "⚠️ First AMRAP Session" ]
-                    , p []
-                        [ text """
-                            Remember: Quality over quantity! Maintain proper form throughout
-                            the session to prevent injury. It's better to do fewer reps
-                            with good form than many with poor form.
-                          """
-                        ]
-                    ]
 
-              else
-                text ""
-            , div [ class "space-y-4" ]
-                [ div [ class "flex flex-col gap-2" ]
-                    [ div [ class "flex justify-between items-center" ]
-                        [ label [ class "text-amber-900" ] [ text "Duration (minutes)" ]
-                        , span [ class "text-amber-900 font-bold" ]
-                            [ text (String.fromInt settings.duration) ]
-                        ]
-                    , input
-                        [ type_ "range"
-                        , Html.Attributes.min
-                            "1"
-                        , Html.Attributes.max
-                            (if Env.mode == Env.Production then
-                                "60"
 
-                             else
-                                "20"
-                            )
-                        , Html.Attributes.step
-                            "1"
-                        , value (String.fromInt settings.duration)
-                        , onInput
-                            (\str ->
-                                let
-                                    newDuration : Int
-                                    newDuration =
-                                        Maybe.withDefault settings.duration (String.toInt str)
+-- Pass message constructors first
 
-                                    previousBest : Maybe Int
-                                    previousBest =
-                                        findBestAMRAPScore shared.workoutHistory newDuration
-                                in
-                                ConfigureAMRAP
-                                    { settings
-                                        | duration = newDuration
-                                        , previousBest = previousBest
-                                    }
-                            )
-                        , class "w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
-                        ]
-                        []
-                    ]
-                , case settings.previousBest of
-                    Just best ->
-                        div [ class "text-amber-800 mt-2 p-3 bg-amber-50 rounded-lg" ]
-                            [ div [ class "font-medium" ] [ text "Previous Best" ]
-                            , div [ class "text-2xl font-bold" ]
-                                [ text (String.fromInt best)
-                                , span [ class "text-base font-normal ml-2" ] [ text "reps" ]
-                                ]
-                            , div [ class "text-sm text-amber-600" ]
-                                [ text ("in " ++ String.fromInt settings.duration ++ " minutes") ]
-                            ]
 
-                    Nothing ->
-                        div [ class "text-amber-800/70 text-sm italic text-center" ]
-                            [ text "No previous attempts for this duration" ]
-                , button
-                    [ class "w-full px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors mt-4"
-                    , onClick StartAMRAP
-                    ]
-                    [ text "Start AMRAP" ]
-                ]
-            ]
-        ]
+viewAMRAPStatus : Shared.Model -> Model -> AMRAP.AMRAPSettings -> Html Msg
+viewAMRAPStatus shared model settings =
+    AMRAP.viewStatus shared { currentReps = model.currentReps } settings
+
+
+viewAMRAPStats : Model -> AMRAP.AMRAPSettings -> Html Msg
+viewAMRAPStats model settings =
+    -- AMRAP doesn't need a separate stats view, stats are included in viewStatus
+    text ""
 
 
 
@@ -1018,39 +866,18 @@ remainingTimePercent seconds =
     EMOM.remainingTimePercent seconds
 
 
-remainingAMRAPTime : AMRAPSettings -> ( Int, Int )
-remainingAMRAPTime settings =
-    let
-        elapsed : Int
-        elapsed =
-            (Time.posixToMillis settings.currentTime - Time.posixToMillis settings.startTime) // 1000
 
-        totalSeconds : Int
-        totalSeconds =
-            settings.duration * 60
-    in
-    ( max 0 (totalSeconds - elapsed)
-    , round (toFloat elapsed / toFloat totalSeconds * 100)
-    )
+-- Update the helper function to use AMRAP module
+
+
+remainingAMRAPTime : AMRAP.AMRAPSettings -> ( Int, Int )
+remainingAMRAPTime settings =
+    AMRAP.remainingTime settings
 
 
 findBestAMRAPScore : List WorkoutResult.WorkoutResult -> Int -> Maybe Int
 findBestAMRAPScore history selectedDuration =
-    history
-        |> List.filterMap
-            (\workout ->
-                case workout.sessionType of
-                    Just (WorkoutResult.StoredAMRAP { duration }) ->
-                        if duration == selectedDuration then
-                            Just workout.reps
-
-                        else
-                            Nothing
-
-                    _ ->
-                        Nothing
-            )
-        |> List.maximum
+    AMRAP.findBestScore history selectedDuration
 
 
 
@@ -1082,7 +909,6 @@ incrementReps shared model =
             else
                 model.currentReps
 
-        -- Check if goal is reached with the new rep count
         hasReachedGoal : Bool
         hasReachedGoal =
             case model.sessionMode of
@@ -1090,7 +916,7 @@ incrementReps shared model =
                     newReps >= totalGoal
 
                 Just (AMRAP settings) ->
-                    settings.status == Finished
+                    settings.status == AMRAP.Finished
 
                 _ ->
                     newReps
@@ -1101,27 +927,17 @@ incrementReps shared model =
                             }
                             model.overwriteRepGoal
 
-        -- Determine which sound to play (only if sound is enabled)
         soundToPlay : Effect Msg
         soundToPlay =
-            if model.soundEnabled then
-                if shouldIncrementRep then
-                    if hasReachedGoal then
-                        Effect.playSound Sound.WorkoutComplete
-                        -- Goal reached!
-
-                    else
-                        Effect.playSound Sound.RepComplete
-                    -- Regular rep complete
+            if shouldIncrementRep then
+                if hasReachedGoal then
+                    Effect.playSound Sound.WorkoutComplete
 
                 else
-                    Effect.playSound Sound.GroundTouch
-                -- Ground touch
+                    Effect.playSound Sound.RepComplete
 
             else
-                Effect.none
-
-        -- No sound if disabled
+                Effect.playSound Sound.GroundTouch
     in
     ( { model
         | currentReps = newReps
@@ -1188,7 +1004,7 @@ viewSessionModeSelection shared model =
                     [ text "Workout" ]
                 , button
                     [ class "w-full px-4 py-3 bg-amber-800 text-white rounded-lg hover:bg-amber-900 transition-colors"
-                    , onClick (SelectMode (AMRAP defaultAMRAPSettings))
+                    , onClick (SelectMode (AMRAP AMRAP.defaultSettings))
                     ]
                     [ text "AMRAP" ]
                 ]
@@ -1261,3 +1077,17 @@ shouldPlayTimerWarning model settings currentTime =
 
 
 -- Play every 2 seconds
+-- Add this helper function
+
+
+hasModalOpen : Model -> Bool
+hasModalOpen model =
+    case model.sessionMode of
+        Just (EMOM settings) ->
+            settings.showSettings
+
+        Just (AMRAP settings) ->
+            settings.showSettings
+
+        _ ->
+            model.initialShowWelcomeModal || model.showHelpModal
