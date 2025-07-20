@@ -2,13 +2,10 @@ module Pages.Counter.EMOM exposing
     ( EMOMMode(..)
     , EMOMSettings
     , EMOMStatus(..)
+    , ModelFields
     , defaultSettings
-    , isBehindPace
-    , remainingTimeInCurrentMinute
-    , remainingTimePercent
     , shouldPlayTimerWarning
     , viewConfig
-    , viewStats
     , viewStatus
     )
 
@@ -17,9 +14,7 @@ import Html.Attributes exposing (checked, class, classList, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Session.Goal
 import Shared
-import Sound exposing (Sound(..))
 import Time
-import WorkoutResult
 
 
 

@@ -9,7 +9,7 @@ module Pages.Counter.AMRAP exposing
     )
 
 import Html exposing (Html, button, div, h3, input, label, span, text)
-import Html.Attributes exposing (class, classList, style, type_, value)
+import Html.Attributes exposing (class, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Shared
 import Time
@@ -193,8 +193,8 @@ viewConfig configureAMRAPMsg startAMRAPMsg shared settings =
         ]
 
 
-viewStatus : Shared.Model -> { currentReps : Int } -> AMRAPSettings -> Html msg
-viewStatus shared model settings =
+viewStatus : { currentReps : Int } -> AMRAPSettings -> Html msg
+viewStatus model settings =
     let
         ( timeRemaining, progress ) =
             remainingTime settings

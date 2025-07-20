@@ -20,7 +20,6 @@
     --color-green-500: oklch(0.723 0.219 149.579);
     --color-green-600: oklch(0.627 0.194 149.214);
     --color-green-700: oklch(0.527 0.154 150.069);
-    --color-green-900: oklch(0.393 0.095 152.535);
     --color-gray-100: oklch(0.967 0.003 264.542);
     --color-gray-200: oklch(0.928 0.006 264.531);
     --color-gray-300: oklch(0.872 0.01 258.338);
@@ -214,9 +213,6 @@
   .pointer-events-none {
     pointer-events: none;
   }
-  .visible {
-    visibility: visible;
-  }
   .absolute {
     position: absolute;
   }
@@ -225,9 +221,6 @@
   }
   .relative {
     position: relative;
-  }
-  .static {
-    position: static;
   }
   .sticky {
     position: sticky;
@@ -333,9 +326,6 @@
   }
   .ml-2 {
     margin-left: calc(var(--spacing) * 2);
-  }
-  .contents {
-    display: contents;
   }
   .flex {
     display: flex;
@@ -512,6 +502,9 @@
   .justify-end {
     justify-content: flex-end;
   }
+  .justify-start {
+    justify-content: flex-start;
+  }
   .gap-1 {
     gap: calc(var(--spacing) * 1);
   }
@@ -653,17 +646,17 @@
   .bg-black\/30 {
     background-color: color-mix(in oklab, var(--color-black) 30%, transparent);
   }
+  .bg-gray-300 {
+    background-color: var(--color-gray-300);
+  }
+  .bg-gray-300\/20 {
+    background-color: color-mix(in oklab, var(--color-gray-300) 20%, transparent);
+  }
   .bg-green-500 {
     background-color: var(--color-green-500);
   }
   .bg-green-600 {
     background-color: var(--color-green-600);
-  }
-  .bg-green-700 {
-    background-color: var(--color-green-700);
-  }
-  .bg-green-700\/20 {
-    background-color: color-mix(in oklab, var(--color-green-700) 20%, transparent);
   }
   .bg-red-600 {
     background-color: var(--color-red-600);
@@ -727,6 +720,9 @@
   }
   .pt-4 {
     padding-top: calc(var(--spacing) * 4);
+  }
+  .pt-8 {
+    padding-top: calc(var(--spacing) * 8);
   }
   .text-center {
     text-align: center;
@@ -840,9 +836,6 @@
   }
   .text-green-700 {
     color: var(--color-green-700);
-  }
-  .text-green-900 {
-    color: var(--color-green-900);
   }
   .text-white {
     color: var(--color-white);
@@ -1024,11 +1017,6 @@
   .active\:bg-amber-800\/30 {
     &:active {
       background-color: color-mix(in oklab, var(--color-amber-800) 30%, transparent);
-    }
-  }
-  .active\:bg-green-700\/30 {
-    &:active {
-      background-color: color-mix(in oklab, var(--color-green-700) 30%, transparent);
     }
   }
   .enabled\:bg-amber-600 {

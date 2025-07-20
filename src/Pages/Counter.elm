@@ -8,10 +8,9 @@ module Pages.Counter exposing
 import Burpee
 import Dict
 import Effect exposing (Effect)
-import Env
-import Html exposing (Html, br, button, details, div, h1, h3, h4, img, input, label, li, p, span, summary, text, ul)
-import Html.Attributes exposing (alt, checked, class, classList, src, style, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, br, button, details, div, h1, h3, h4, img, li, p, span, summary, text, ul)
+import Html.Attributes exposing (alt, class, classList, src)
+import Html.Events exposing (onClick)
 import Page exposing (Page)
 import Pages.Counter.AMRAP as AMRAP
 import Pages.Counter.EMOM as EMOM
@@ -19,7 +18,7 @@ import Route exposing (Route)
 import Route.Path
 import Session.Goal
 import Shared
-import Sound exposing (Sound(..), toString)
+import Sound
 import Time
 import View exposing (View)
 import WorkoutResult
@@ -46,11 +45,6 @@ type SessionMode
     | AMRAP AMRAP.AMRAPSettings
 
 
-type EMOMMode
-    = FixedRounds -- Original mode with set number of rounds
-    | EndlessMode -- New mode that continues until failure
-
-
 type Msg
     = IncrementReps
     | GotWorkoutFinishedTime Time.Posix
@@ -71,7 +65,6 @@ type Msg
     | ToggleHelpModal
     | CloseHelpModal
     | ToggleSound
-    | PlayTimerWarning
 
 
 type alias Model =
@@ -482,15 +475,6 @@ update shared msg model =
             , Effect.none
             )
 
-        PlayTimerWarning ->
-            ( { model | lastWarningTime = Just shared.currentTime }
-            , if model.soundEnabled then
-                Effect.playSound Sound.TimerWarning
-
-              else
-                Effect.none
-            )
-
 
 
 -- Do nothing, just stop event propagation
@@ -702,7 +686,7 @@ view shared model =
                                 AMRAP.viewConfig ConfigureAMRAP StartAMRAP shared settings
 
                             else
-                                AMRAP.viewStatus shared { currentReps = model.currentReps } settings
+                                AMRAP.viewStatus { currentReps = model.currentReps } settings
 
                         _ ->
                             div
@@ -805,74 +789,12 @@ view shared model =
     }
 
 
-viewEMOMConfig : Int -> EMOM.EMOMSettings -> Html Msg
-viewEMOMConfig repGoal settings =
-    EMOM.viewConfig ConfigureEMOM
-        StartEMOM
-        (Session.Goal.calculateNextGoal
-            { lastSessions = [], currentTime = Time.millisToPosix 0, timeZone = Time.utc }
-            (Just repGoal)
-         -- Wrap in Just to make it Maybe Int
-        )
-        settings
-
-
-viewEMOMStatus : Shared.Model -> Model -> EMOM.EMOMSettings -> Html Msg
-viewEMOMStatus shared model settings =
-    EMOM.viewStatus shared
-        { currentReps = model.currentReps
-        , overwriteRepGoal = model.overwriteRepGoal
-        , lastWarningTime = model.lastWarningTime
-        }
-        settings
-
-
 
 -- Remove this function since AMRAP doesn't need separate stats
 -- viewAMRAPStats : Model -> AMRAP.AMRAPSettings -> Html Msg
-
-
-viewAMRAPConfig : Shared.Model -> AMRAP.AMRAPSettings -> Html Msg
-viewAMRAPConfig shared settings =
-    AMRAP.viewConfig ConfigureAMRAP StartAMRAP shared settings
-
-
-
 -- Pass message constructors first
-
-
-viewAMRAPStatus : Shared.Model -> Model -> AMRAP.AMRAPSettings -> Html Msg
-viewAMRAPStatus shared model settings =
-    AMRAP.viewStatus shared { currentReps = model.currentReps } settings
-
-
-viewAMRAPStats : Model -> AMRAP.AMRAPSettings -> Html Msg
-viewAMRAPStats model settings =
-    -- AMRAP doesn't need a separate stats view, stats are included in viewStatus
-    text ""
-
-
-
 -- Helper functions
-
-
-remainingTimeInCurrentMinute : Time.Posix -> Time.Posix -> Int
-remainingTimeInCurrentMinute startTime currentTime =
-    EMOM.remainingTimeInCurrentMinute startTime currentTime
-
-
-remainingTimePercent : Int -> Float
-remainingTimePercent seconds =
-    EMOM.remainingTimePercent seconds
-
-
-
 -- Update the helper function to use AMRAP module
-
-
-remainingAMRAPTime : AMRAP.AMRAPSettings -> ( Int, Int )
-remainingAMRAPTime settings =
-    AMRAP.remainingTime settings
 
 
 findBestAMRAPScore : List WorkoutResult.WorkoutResult -> Int -> Maybe Int
@@ -909,27 +831,28 @@ incrementReps shared model =
             else
                 model.currentReps
 
-        hasReachedGoal : Bool
-        hasReachedGoal =
-            case model.sessionMode of
-                Just (Workout { totalGoal }) ->
-                    newReps >= totalGoal
-
-                Just (AMRAP settings) ->
-                    settings.status == AMRAP.Finished
-
-                _ ->
-                    newReps
-                        >= Session.Goal.calculateNextGoal
-                            { lastSessions = shared.workoutHistory
-                            , currentTime = shared.currentTime
-                            , timeZone = shared.timeZone
-                            }
-                            model.overwriteRepGoal
-
         soundToPlay : Effect Msg
         soundToPlay =
             if shouldIncrementRep then
+                let
+                    hasReachedGoal : Bool
+                    hasReachedGoal =
+                        case model.sessionMode of
+                            Just (Workout { totalGoal }) ->
+                                newReps >= totalGoal
+
+                            Just (AMRAP settings) ->
+                                settings.status == AMRAP.Finished
+
+                            _ ->
+                                newReps
+                                    >= Session.Goal.calculateNextGoal
+                                        { lastSessions = shared.workoutHistory
+                                        , currentTime = shared.currentTime
+                                        , timeZone = shared.timeZone
+                                        }
+                                        model.overwriteRepGoal
+                in
                 if hasReachedGoal then
                     Effect.playSound Sound.WorkoutComplete
 
@@ -1063,19 +986,6 @@ viewHelpModal =
 
 
 -- Add this new helper function
-
-
-isBehindPace : Model -> EMOM.EMOMSettings -> Bool
-isBehindPace model settings =
-    EMOM.isBehindPace { currentReps = model.currentReps, lastWarningTime = model.lastWarningTime } settings
-
-
-shouldPlayTimerWarning : Model -> EMOM.EMOMSettings -> Time.Posix -> Bool
-shouldPlayTimerWarning model settings currentTime =
-    EMOM.shouldPlayTimerWarning { currentReps = model.currentReps, lastWarningTime = model.lastWarningTime } settings currentTime
-
-
-
 -- Play every 2 seconds
 -- Add this helper function
 
