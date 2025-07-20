@@ -660,7 +660,7 @@ view shared model =
                         ]
                     ]
                 , div
-                    (class "w-screen flex-1 flex flex-col items-center justify-center bg-amber-100/30 cursor-pointer select-none touch-manipulation relative"
+                    (class "w-screen flex-1 flex flex-col items-center justify-start pt-8 bg-amber-100/30 cursor-pointer select-none touch-manipulation relative"
                         :: (if isSessionStarted model then
                                 [ onClick IncrementReps ]
 
@@ -796,7 +796,7 @@ view shared model =
                                     ]
                                 ]
                     , div
-                        [ class "text-lg text-amber-800 transition-opacity duration-300"
+                        [ class "text-lg text-amber-800 transition-opacity duration-300 mt-auto mb-8"
                         , classList
                             [ ( "opacity-0", model.currentReps > 0 )
                             , ( "opacity-100 animate-pulse", model.currentReps == 0 )
