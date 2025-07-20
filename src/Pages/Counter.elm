@@ -22,6 +22,7 @@ import Route exposing (Route)
 import Route.Path
 import Session.Goal
 import Shared
+import Sound exposing (Sound(..), toString)
 import Time
 import View exposing (View)
 import WorkoutResult
@@ -108,6 +109,7 @@ type Msg
     | AMRAPTick Time.Posix
     | ToggleHelpModal
     | CloseHelpModal
+    | ToggleSound -- Add this new message
 
 
 type alias Model =
@@ -120,6 +122,7 @@ type alias Model =
     , redirectTime : Maybe Time.Posix
     , isDebouncing : Bool
     , showHelpModal : Bool
+    , soundEnabled : Bool -- Add this field
     }
 
 
@@ -134,6 +137,7 @@ init shared route _ =
       , redirectTime = Nothing
       , isDebouncing = False
       , showHelpModal = False
+      , soundEnabled = True -- Initialize soundEnabled
       }
     , Effect.none
     )
@@ -487,6 +491,11 @@ update shared msg model =
             , Effect.none
             )
 
+        ToggleSound ->
+            ( { model | soundEnabled = not model.soundEnabled }
+            , Effect.none
+            )
+
 
 
 -- SUBSCRIPTIONS
@@ -625,36 +634,55 @@ view shared model =
                         ]
                         [ summary [ class "text-lg mt-4 text-amber-800 font-semibold hover:text-amber-900 cursor-pointer select-none border border-amber-800/30 rounded px-3 py-1" ]
                             [ text "Show actions" ]
-                        , div [ class "flex justify-between gap-4 mt-2" ]
-                            [ div [ class "flex gap-4" ]
+                        , div [ class "mt-2 space-y-2" ]
+                            [ div [ class "flex gap-2" ]
+                                -- Top row: Reset and Menu
                                 [ button
-                                    [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                                    [ class "flex-1 px-4 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
                                     , onClick ResetCounter
                                     ]
                                     [ text "Reset Counter" ]
                                 , button
-                                    [ class "px-6 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                                    [ class "flex-1 px-4 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
                                     , onClick ChangeToMenu
                                     ]
                                     [ text "Menu" ]
                                 ]
-                            , button
-                                [ class "px-6 py-3 rounded-lg text-sm"
-                                , classList
-                                    [ ( "cursor-pointer bg-green-700/20 text-green-900 active:bg-green-700/30", not isWorkoutFinished && not hasReachedGoal )
-                                    , ( "opacity-50 cursor-not-allowed", isWorkoutFinished )
-                                    , ( "bg-green-600 hover:bg-green-700 text-white font-medium", hasReachedGoal )
+                            , div [ class "flex gap-2" ]
+                                -- Middle row: Sound toggle
+                                [ button
+                                    [ class "flex-1 px-4 py-3 rounded-lg bg-amber-800/20 cursor-pointer select-none text-sm text-amber-900 active:bg-amber-800/30"
+                                    , onClick ToggleSound
                                     ]
-                                , onClick GetWorkoutFinishedTime
-                                , Html.Attributes.disabled isWorkoutFinished
-                                ]
-                                [ text
-                                    (if hasReachedGoal then
-                                        "Save Session! 🎉"
+                                    [ text
+                                        (if model.soundEnabled then
+                                            "🔊 Sound On"
 
-                                     else
-                                        "Done"
-                                    )
+                                         else
+                                            "🔇 Sound Off"
+                                        )
+                                    ]
+                                ]
+                            , div [ class "flex gap-2" ]
+                                -- Bottom row: Done button (full width)
+                                [ button
+                                    [ class "w-full px-4 py-3 rounded-lg text-sm"
+                                    , classList
+                                        [ ( "cursor-pointer bg-amber-800/20 text-amber-900 active:bg-amber-800/30", not isWorkoutFinished && not hasReachedGoal )
+                                        , ( "opacity-50 cursor-not-allowed bg-gray-300/20 text-gray-600", isWorkoutFinished )
+                                        , ( "bg-green-600 hover:bg-green-700 text-white font-medium", hasReachedGoal )
+                                        ]
+                                    , onClick GetWorkoutFinishedTime
+                                    , Html.Attributes.disabled isWorkoutFinished
+                                    ]
+                                    [ text
+                                        (if hasReachedGoal then
+                                            "Save Session! 🎉"
+
+                                         else
+                                            "Done"
+                                        )
+                                    ]
                                 ]
                             ]
                         ]
@@ -1273,14 +1301,58 @@ incrementReps shared model =
         shouldIncrementRep : Bool
         shouldIncrementRep =
             newGroundTouches >= requiredTouches
-    in
-    ( { model
-        | currentReps =
+
+        newReps : Int
+        newReps =
             if shouldIncrementRep then
                 model.currentReps + 1
 
             else
                 model.currentReps
+
+        -- Check if goal is reached with the new rep count
+        hasReachedGoal : Bool
+        hasReachedGoal =
+            case model.sessionMode of
+                Just (Workout { totalGoal }) ->
+                    newReps >= totalGoal
+
+                Just (AMRAP settings) ->
+                    settings.status == Finished
+
+                _ ->
+                    newReps
+                        >= Session.Goal.calculateNextGoal
+                            { lastSessions = shared.workoutHistory
+                            , currentTime = shared.currentTime
+                            , timeZone = shared.timeZone
+                            }
+                            model.overwriteRepGoal
+
+        -- Determine which sound to play (only if sound is enabled)
+        soundToPlay : Effect Msg
+        soundToPlay =
+            if model.soundEnabled then
+                if shouldIncrementRep then
+                    if hasReachedGoal then
+                        Effect.playSound Sound.WorkoutComplete
+                        -- Goal reached!
+
+                    else
+                        Effect.playSound Sound.RepComplete
+                    -- Regular rep complete
+
+                else
+                    Effect.playSound Sound.GroundTouch
+                -- Ground touch
+
+            else
+                Effect.none
+
+        -- No sound if disabled
+    in
+    ( { model
+        | currentReps = newReps
         , groundTouchesForCurrentRep =
             if shouldIncrementRep then
                 0
@@ -1289,7 +1361,7 @@ incrementReps shared model =
                 newGroundTouches
         , isDebouncing = True
       }
-    , Effect.none
+    , soundToPlay
     )
 
 

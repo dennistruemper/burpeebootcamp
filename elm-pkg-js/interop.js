@@ -7,6 +7,49 @@ const TO_JS_PORT = "toJs";
 const TO_ELM_PORT = "toElm";
 const SERVICE_WORKER_PATH = "/serviceWorker.js";
 
+// Add audio context and sounds
+let audioContext = null;
+const sounds = {};
+
+// Initialize audio context on first user interaction
+function initAudio() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+// Load and cache sound files
+async function loadSound(filename) {
+  if (sounds[filename]) {
+    return sounds[filename];
+  }
+
+  try {
+    // Try to load from cache first, then network
+    const response = await fetch(`/sounds/${filename}`);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    sounds[filename] = audioBuffer;
+    return audioBuffer;
+  } catch (error) {
+    console.error("Failed to load sound:", filename, error);
+    return null;
+  }
+}
+
+// Play a sound
+async function playSound(filename) {
+  initAudio();
+
+  const audioBuffer = await loadSound(filename);
+  if (audioBuffer) {
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+  }
+}
+
 exports.init = async function (app) {
   // Initial load of data
   try {
@@ -53,6 +96,9 @@ exports.init = async function (app) {
         break;
       case "LogError":
         console.error("BurpeeBootcamp Error:", event.data);
+        break;
+      case "PlaySound":
+        playSound(event.data);
         break;
       default:
         console.log(`fromElm event of tag ${event.tag} not handled`, event);

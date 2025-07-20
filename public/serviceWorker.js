@@ -2,6 +2,7 @@ const version = "v19";
 const cacheName = `cache-${version}`;
 const assets = [
   "/",
+  "/index.html",
   "/manifest.json",
   `/styles.${version}.css`,
   "/icon/icon.svg",
@@ -10,6 +11,13 @@ const assets = [
   "/android/android-launchericon-192-192.png",
   "/android/android-launchericon-512-512.png",
   "/logo/logo.png",
+  "/logo/logo-192.png",
+  "/logo/logo-512.png",
+  // Add sound files to cache for offline usage
+  "/sounds/rep-complete.mp3",
+  "/sounds/ground-touch.mp3",
+  "/sounds/workout-complete.mp3",
+  "/sounds/timer-warning.mp3",
 ];
 self.addEventListener("install", (installEvent) => {
   installEvent.waitUntil(

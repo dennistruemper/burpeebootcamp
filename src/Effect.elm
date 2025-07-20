@@ -5,7 +5,7 @@ module Effect exposing
     , pushRoute, replaceRoute
     , pushRoutePath, replaceRoutePath
     , map, toCmd
-    , calculateRepGoal, getRandom, getTime, getTimeZone, logError, newCurrentBurpee, storeBurpeeVariant, storeWorkout, storeWorkoutResult
+    , calculateRepGoal, getRandom, getTime, getTimeZone, logError, newCurrentBurpee, playSound, storeBurpeeVariant, storeWorkout, storeWorkoutResult
     )
 
 {-|
@@ -32,10 +32,15 @@ import Route
 import Route.Path
 import Shared.Model
 import Shared.Msg
+import Sound exposing (Sound)
 import Task
 import Time
 import Url exposing (Url)
 import WorkoutResult exposing (WorkoutResult)
+
+
+
+-- Add the Sound type
 
 
 type Effect msg
@@ -182,6 +187,14 @@ calculateRepGoal gotTimeMsg =
 getRandom : Random.Generator a -> (a -> msg) -> Effect msg
 getRandom generator toMsg =
     SendCmd (Random.generate toMsg generator)
+
+
+playSound : Sound -> Effect msg
+playSound sound =
+    SendMessageToJavaScript
+        { tag = "PlaySound"
+        , data = Json.Encode.string (Sound.toString sound)
+        }
 
 
 
