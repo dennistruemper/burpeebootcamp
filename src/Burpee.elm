@@ -135,7 +135,7 @@ variations =
     , Burpee { name = "Gentle Burpee (Parallets)", angle = LittleInclined, groundPart = Plank, topPart = KneeRaise }
     , Burpee { name = "Half Burpee (Parallets)", angle = LittleInclined, groundPart = MountainClimbers 1, topPart = KneeRaise }
     , Burpee { name = "1 Pump (Parallets)", angle = LittleInclined, groundPart = Pushups 1, topPart = KneeRaise }
-    , Burpee { name = "1 Pump", angle = Flat, groundPart = Pushups 2, topPart = KneeRaise }
+    , Burpee { name = "1 Pump", angle = Flat, groundPart = Pushups 1, topPart = KneeRaise }
     , Burpee { name = "2 Pump", angle = Flat, groundPart = Pushups 2, topPart = KneeRaise }
     , Burpee { name = "2 Pump JJ", angle = Flat, groundPart = Pushups 2, topPart = JumpingJack }
     , Burpee { name = "3 Pump", angle = Flat, groundPart = Pushups 3, topPart = KneeRaise }
